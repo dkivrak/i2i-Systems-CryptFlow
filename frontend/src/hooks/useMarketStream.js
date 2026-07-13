@@ -1,0 +1,4 @@
+import { useEffect, useState } from 'react'; import { Client } from '@stomp/stompjs'; import { api,WS_URL } from '../api/client';
+export function useMarketStream(){const [market,setMarket]=useState(null),[status,setStatus]=useState('connecting'),[error,setError]=useState('');
+  useEffect(()=>{let alive=true;api('/market/prices').then(v=>alive&&setMarket(v)).catch(e=>alive&&setError(e.message));const client=new Client({brokerURL:WS_URL,reconnectDelay:5000,onConnect:()=>{if(!alive)return;setStatus('live');client.subscribe('/topic/market/prices',m=>{setMarket(JSON.parse(m.body));setStatus('live')})},onWebSocketClose:()=>alive&&setStatus('offline'),onStompError:()=>alive&&setStatus('offline')});client.activate();return()=>{alive=false;client.deactivate()};},[]);
+  return {market,status,error};}

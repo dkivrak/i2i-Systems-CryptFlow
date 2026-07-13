@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: cryptflow
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cryptflow}
+    username: ${SPRING_DATASOURCE_USERNAME:cryptflow}
+    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      repositories:
+        enabled: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  frontend-origins: ${FRONTEND_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  session-ttl-hours: ${SESSION_TTL_HOURS:24}
+  ticker:
+    interval-ms: ${TICKER_INTERVAL_MS:15000}
+    max-change-percent: ${TICKER_MAX_CHANGE_PERCENT:0.5}
+    initial-prices:
+      BTC: ${TICKER_INITIAL_BTC_PRICE:60000.00}
+      ETH: ${TICKER_INITIAL_ETH_PRICE:3000.00}
+      SOL: ${TICKER_INITIAL_SOL_PRICE:150.00}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:15}
