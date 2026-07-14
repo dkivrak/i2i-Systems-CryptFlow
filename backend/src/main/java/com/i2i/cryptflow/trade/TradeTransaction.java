@@ -19,12 +19,32 @@ public class TradeTransaction {
   @Column(name="unit_price_usd", nullable=false, precision=19, scale=2) private BigDecimal unitPriceUsd;
   @Column(name="total_usd", nullable=false, precision=19, scale=2) private BigDecimal totalUsd;
   @Column(name="executed_at", nullable=false) private Instant executedAt;
-  protected TradeTransaction() {}
-  public TradeTransaction(User user, Wallet wallet, AssetSymbol symbol, TradeSide side, BigDecimal quantity, BigDecimal unitPrice, BigDecimal total){
-    id=UUID.randomUUID();this.user=user;this.wallet=wallet;this.symbol=symbol;this.side=side;this.quantity=quantity;unitPriceUsd=unitPrice;totalUsd=total;executedAt=Instant.now();
-  }
-  public UUID getId(){return id;} public AssetSymbol getSymbol(){return symbol;} public TradeSide getSide(){return side;}
-  public BigDecimal getQuantity(){return quantity;} public BigDecimal getUnitPriceUsd(){return unitPriceUsd;}
-  public BigDecimal getTotalUsd(){return totalUsd;} public Instant getExecutedAt(){return executedAt;}
-}
 
+  protected TradeTransaction() {}
+
+  public TradeTransaction(User user, Wallet wallet, AssetSymbol symbol, TradeSide side, BigDecimal quantity, BigDecimal unitPrice, BigDecimal total) {
+    id = UUID.randomUUID();
+    this.user = user;
+    this.wallet = wallet;
+    this.symbol = symbol;
+    this.side = side;
+    this.quantity = quantity;
+    unitPriceUsd = unitPrice;
+    totalUsd = total;
+    executedAt = Instant.now();
+  }
+
+  public UUID getId() { return id; }
+
+  public AssetSymbol getSymbol() { return symbol; }
+
+  public TradeSide getSide() { return side; }
+
+  public BigDecimal getQuantity() { return quantity; }
+
+  public BigDecimal getUnitPriceUsd() { return unitPriceUsd; }
+
+  public BigDecimal getTotalUsd() { return totalUsd; }
+
+  public Instant getExecutedAt() { return executedAt; }
+}

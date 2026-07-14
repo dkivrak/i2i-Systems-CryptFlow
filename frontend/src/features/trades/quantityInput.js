@@ -1,9 +1,12 @@
-export const INVALID_AMOUNT_MESSAGE = 'Miktar pozitif ve en fazla 8 ondalıklı olmalıdır.'
+export const MAX_DECIMAL_PLACES = 8
+
+export const INVALID_AMOUNT_MESSAGE = 'Quantity must be positive with at most 8 decimal places.'
 
 export function normalizeQuantityInput(rawValue) {
   const normalized = rawValue.replace(/,/g, '.')
 
   if (normalized === '') return ''
+  // Allow up to MAX_DECIMAL_PLACES decimal digits
   if (!/^\d*(?:\.\d{0,8})?$/.test(normalized)) return null
   if (normalized.startsWith('.')) return `0${normalized}`
 

@@ -17,5 +17,7 @@ public class User {
     this.createdAt=Instant.now(); this.updatedAt=this.createdAt;
   }
   public UUID getId(){return id;} public String getEmail(){return email;} public String getPasswordHash(){return passwordHash;}
+  public java.time.Instant getCreatedAt(){return createdAt;}
+  public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; this.updatedAt = Instant.now(); }
 }
 

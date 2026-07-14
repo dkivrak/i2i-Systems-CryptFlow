@@ -1,2 +1,49 @@
-import { afterEach,beforeAll,describe,expect,it,vi } from 'vitest'; import { api,buildApiUrl,token } from './client';
-describe('API client',()=>{beforeAll(()=>{const values=new Map();vi.stubGlobal('sessionStorage',{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)})});afterEach(()=>{token.clear();vi.restoreAllMocks()});it('builds URLs under the /api base',()=>{expect(buildApiUrl('/auth/register')).toBe('http://localhost:8080/api/auth/register');expect(buildApiUrl('/api/auth/register')).toBe('http://localhost:8080/api/auth/register')});it('stores and clears token in sessionStorage',()=>{token.set('abc');expect(token.get()).toBe('abc');token.clear();expect(token.get()).toBeNull()});it('sends the stored token as a Bearer header',async()=>{token.set('session-token');const fetchMock=vi.fn().mockResolvedValue({status:200,ok:true,json:async()=>({id:'user'})});vi.stubGlobal('fetch',fetchMock);await api('/me');expect(fetchMock).toHaveBeenCalledWith('http://localhost:8080/api/me',expect.objectContaining({headers:expect.objectContaining({Authorization:'Bearer session-token'})}))})})
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { api, buildApiUrl, token } from './client'
+
+describe('API client', () => {
+  beforeAll(() => {
+    const values = new Map()
+    vi.stubGlobal('sessionStorage', {
+      getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value),
+      removeItem: key => values.delete(key)
+    })
+  })
+
+  afterEach(() => {
+    token.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('builds URLs under the /api base', () => {
+    expect(buildApiUrl('/auth/register')).toBe('http://localhost:8080/api/auth/register')
+    expect(buildApiUrl('/api/auth/register')).toBe('http://localhost:8080/api/auth/register')
+  })
+
+  it('stores and clears token in sessionStorage', () => {
+    token.set('abc')
+    expect(token.get()).toBe('abc')
+    token.clear()
+    expect(token.get()).toBeNull()
+  })
+
+  it('sends the stored token as a Bearer header', async () => {
+    token.set('session-token')
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({ id: 'user' })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await api('/me')
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8080/api/me',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer session-token'
+        })
+      })
+    )
+  })
+})

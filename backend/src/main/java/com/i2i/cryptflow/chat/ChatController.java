@@ -8,7 +8,14 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/chat")
 public class ChatController {
-  private final ChatService service;public ChatController(ChatService service){this.service=service;}
+  private static final int MAX_MESSAGE_LENGTH = 2000;
+
+  private final ChatService service;
+
+  public ChatController(ChatService service) {
+    this.service = service;
+  }
+
   @PostMapping("/query") ChatService.ChatResponse query(@AuthenticationPrincipal UUID userId,@Valid @RequestBody ChatRequest r){return service.query(userId,r.message());}
-  public record ChatRequest(@NotBlank @Size(max=2000) String message){}
+  public record ChatRequest(@NotBlank @Size(max=MAX_MESSAGE_LENGTH) String message){}
 }

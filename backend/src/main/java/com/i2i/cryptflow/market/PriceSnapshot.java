@@ -13,6 +13,16 @@ public class PriceSnapshot {
   @Column(name="recorded_at", nullable=false) private Instant recordedAt;
   protected PriceSnapshot() {}
   public PriceSnapshot(AssetSymbol symbol, BigDecimal price, Instant time){this.symbol=symbol;priceUsd=price;recordedAt=time;}
-  public AssetSymbol getSymbol(){return symbol;} public BigDecimal getPriceUsd(){return priceUsd;} public Instant getRecordedAt(){return recordedAt;}
+  public AssetSymbol getSymbol() {
+    return symbol;
+  }
+
+  public BigDecimal getPriceUsd() {
+    return priceUsd;
+  }
+
+  public Instant getRecordedAt() {
+    return recordedAt;
+  }
 }
 

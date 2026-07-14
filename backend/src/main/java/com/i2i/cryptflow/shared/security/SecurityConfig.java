@@ -30,7 +30,7 @@ public class SecurityConfig {
         .anyRequest().authenticated())
       .exceptionHandling(e->e.authenticationEntryPoint((req,res,ex)->{
         res.setStatus(HttpStatus.UNAUTHORIZED.value());res.setContentType("application/json");
-        mapper.writeValue(res.getOutputStream(),new ApiError("INVALID_SESSION","Oturum geçersiz veya süresi dolmuş.",Instant.now(),List.of()));
+        mapper.writeValue(res.getOutputStream(),new ApiError("INVALID_SESSION","Session is invalid or has expired.",Instant.now(),List.of()));
       }))
       .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
     return http.build();

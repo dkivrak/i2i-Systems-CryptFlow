@@ -29,6 +29,6 @@ public class MarketPriceService {
     var values=new HashMap<String,String>();prices.forEach((s,p)->values.put(s.name(),p.toPlainString()));values.put(UPDATED,time.toString());
     redis.delete(KEY);redis.opsForHash().putAll(KEY,values);
   }
-  private ApiException unavailable(){return new ApiException(HttpStatus.SERVICE_UNAVAILABLE,"MARKET_DATA_UNAVAILABLE","Güncel piyasa verisi şu anda kullanılamıyor.");}
+  private ApiException unavailable(){return new ApiException(HttpStatus.SERVICE_UNAVAILABLE,"MARKET_DATA_UNAVAILABLE","Current market data is unavailable.");}
 }
 

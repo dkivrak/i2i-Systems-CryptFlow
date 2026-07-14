@@ -21,17 +21,17 @@ public class GlobalExceptionHandler {
   ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
     var fields = ex.getBindingResult().getFieldErrors().stream()
         .map(e -> new ApiError.FieldError(e.getField(), e.getDefaultMessage())).toList();
-    return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR", "Gönderilen alanları kontrol edin.", Instant.now(), fields));
+    return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR", "Please check the submitted fields.", Instant.now(), fields));
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
   ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex) {
-    return ResponseEntity.badRequest().body(new ApiError("INVALID_REQUEST", "Gönderilen değerlerden biri desteklenmiyor.", Instant.now(), List.of()));
+    return ResponseEntity.badRequest().body(new ApiError("INVALID_REQUEST", "One of the submitted values is not supported.", Instant.now(), List.of()));
   }
 
   @ExceptionHandler(Exception.class)
   ResponseEntity<ApiError> handleUnexpected(Exception ex) {
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(new ApiError("INTERNAL_ERROR", "Beklenmeyen bir hata oluştu.", Instant.now(), List.of()));
+        .body(new ApiError("INTERNAL_ERROR", "An unexpected error occurred.", Instant.now(), List.of()));
   }
 }
