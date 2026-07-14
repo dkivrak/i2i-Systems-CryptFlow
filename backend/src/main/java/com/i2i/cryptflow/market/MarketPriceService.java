@@ -29,6 +29,10 @@ public class MarketPriceService {
     var values=new HashMap<String,String>();prices.forEach((s,p)->values.put(s.name(),p.toPlainString()));values.put(UPDATED,time.toString());
     redis.delete(KEY);redis.opsForHash().putAll(KEY,values);
   }
+  public void updateSinglePrice(AssetSymbol symbol, BigDecimal price, Instant time){
+    redis.opsForHash().put(KEY, symbol.name(), price.toPlainString());
+    redis.opsForHash().put(KEY, UPDATED, time.toString());
+  }
   private ApiException unavailable(){return new ApiException(HttpStatus.SERVICE_UNAVAILABLE,"MARKET_DATA_UNAVAILABLE","Güncel piyasa verisi şu anda kullanılamıyor.");}
 }
 

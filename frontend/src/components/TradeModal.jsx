@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { INVALID_AMOUNT_MESSAGE, isPositiveQuantity, normalizeQuantityInput } from '../features/trades/quantityInput'
 
@@ -7,6 +7,35 @@ export default function TradeModal({ symbol, onClose, onComplete }) {
   const [quantity, setQuantity] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [livePrice, setLivePrice] = useState(0)
+  const [lockedPrice, setLockedPrice] = useState(null)
+
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8080/ws/prices/${symbol.toLowerCase()}`)
+
+    ws.onmessage = event => {
+      const nextPrice = JSON.parse(event.data)
+      setLivePrice(nextPrice)
+    }
+
+    ws.onerror = event => {
+      console.error('WebSocket error:', event)
+    }
+
+    ws.onclose = event => {
+      console.info('WebSocket closed:', event)
+    }
+
+    return () => ws.close()
+  }, [symbol])
+
+  useEffect(() => {
+    if (livePrice > 0 && lockedPrice === null) {
+      setLockedPrice(livePrice)
+    }
+  }, [livePrice, lockedPrice])
+
+  useEffect(() => () => setLockedPrice(null), [])
 
   function changeQuantity(event) {
     const nextValue = normalizeQuantityInput(event.target.value)
@@ -46,6 +75,8 @@ export default function TradeModal({ symbol, onClose, onComplete }) {
       </div>
       <form onSubmit={submit} className="mt-6">
         <label htmlFor="trade-quantity" className="text-sm text-slate-300">Coin miktarı</label>
+        <div className="mt-2 text-sm text-slate-300">Canlı Fiyat: {livePrice}</div>
+        <div className="mt-1 text-sm text-slate-300">İşlem Fiyatı: {lockedPrice}</div>
         <div className="relative mt-2">
           <input
             id="trade-quantity"
@@ -61,7 +92,7 @@ export default function TradeModal({ symbol, onClose, onComplete }) {
           />
         </div>
         {error && <p role="alert" className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-        <button disabled={busy} className="btn btn-primary mt-6 w-full">{busy ? 'Emir işleniyor…' : 'Emri gerçekleştir'}</button>
+        <button disabled={busy || !!error} className="btn btn-primary mt-6 w-full disabled:opacity-50 disabled:cursor-not-allowed">{busy ? 'Emir işleniyor…' : 'Emri gerçekleştir'}</button>
       </form>
     </div>
   </div>
