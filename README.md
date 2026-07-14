@@ -50,8 +50,12 @@ Kök `.env.example` dosyasını `.env` olarak kopyalayın. Gerçek `.env` Git ta
 | `FRONTEND_ORIGINS` | CORS ve WebSocket için virgülle ayrılmış izinli origin listesi |
 | `TICKER_*` | Scheduler aralığı, maksimum değişim ve başlangıç fiyatları |
 | `GEMINI_API_KEY` | Gemini API anahtarı; boşsa yalnız chat devre dışıdır |
-| `GEMINI_MODEL` | Kullanılacak güncel Gemini model adı |
-| `GEMINI_TIMEOUT_SECONDS` | Gemini çağrı timeout'u |
+| `GEMINI_MODEL` | Kullanılacak Gemini model adı; varsayılan `gemini-3.1-flash-lite` |
+| `GEMINI_TIMEOUT_SECONDS` | Gemini çağrı timeout'u; varsayılan 30 saniye |
+
+`.env` içindeki bir backend değişkeni güncellendiğinde `docker compose restart backend`
+eski container environment'ını korur. Yeni değeri yüklemek için backend'i
+`docker compose up -d --build --force-recreate backend` ile yeniden oluşturun.
 
 Frontend gerekirse `frontend/.env.local` içinde `VITE_API_BASE_URL=http://localhost:8080/api` ve `VITE_WS_URL=ws://localhost:8080/ws` tanımlayabilir. Örnek değerler [frontend/.env.example](frontend/.env.example) dosyasındadır.
 
