@@ -3,71 +3,86 @@ package com.i2i.cryptflow.market;
 import com.i2i.cryptflow.shared.model.AssetSymbol;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.*;
+import java.util.EnumMap;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Orchestrates periodic price updates using a {@link MarketDataProvider}.
- * The actual price generation logic is fully decoupled behind the provider interface,
- * allowing easy swap between simulated and live data sources.
+ * Orchestrates periodic price updates.
+ * In production, updates snapshots in database based on prices fetched from Redis.
  */
 @Component
 public class TickerEngine {
+  private final MarketPriceService market;
+  private final PriceSnapshotRepository snapshots;
+  private final PriceSnapshotWriter writer;
+  private final Map<AssetSymbol, BigDecimal> initial;
 
-    private final MarketDataProvider dataProvider;
-    private final MarketPriceService market;
-    private final PriceSnapshotRepository snapshots;
-    private final PriceSnapshotWriter writer;
-    private final SimpMessagingTemplate messaging;
+  public TickerEngine(
+      MarketPriceService market,
+      PriceSnapshotRepository snapshots,
+      PriceSnapshotWriter writer,
+      @Value("${app.ticker.initial-prices.BTC}") BigDecimal btc,
+      @Value("${app.ticker.initial-prices.ETH}") BigDecimal eth,
+      @Value("${app.ticker.initial-prices.SOL}") BigDecimal sol
+  ) {
+    this.market = market;
+    this.snapshots = snapshots;
+    this.writer = writer;
+    this.initial = Map.of(
+        AssetSymbol.BTC, btc,
+        AssetSymbol.ETH, eth,
+        AssetSymbol.SOL, sol
+    );
+  }
 
-    public TickerEngine(MarketDataProvider dataProvider, MarketPriceService market,
-                        PriceSnapshotRepository snapshots, PriceSnapshotWriter writer,
-                        SimpMessagingTemplate messaging) {
-        this.dataProvider = dataProvider;
-        this.market = market;
-        this.snapshots = snapshots;
-        this.writer = writer;
-        this.messaging = messaging;
+  @EventListener(ApplicationReadyEvent.class)
+  public void bootstrap() {
+    try {
+      market.getCurrent();
+      return;
+    } catch (Exception ignored) {
+      // Redis is empty or incomplete; restore a complete market below.
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void bootstrap() {
-        try { market.getCurrent(); return; } catch (Exception ignored) {}
-        var prices = new EnumMap<AssetSymbol, BigDecimal>(AssetSymbol.class);
-        boolean foundAll = true;
-        for (var s : AssetSymbol.values()) {
-            var latest = snapshots.findFirstBySymbolOrderByRecordedAtDesc(s);
-            if (latest.isEmpty()) { foundAll = false; break; }
-            prices.put(s, latest.get().getPriceUsd());
-        }
-        if (!foundAll) {
-            var initial = dataProvider.nextPrices(Map.of());
-            var now = Instant.now();
-            writer.write(initial, now);
-            market.overwrite(initial, now);
-        } else {
-            market.overwrite(prices, Instant.now());
-        }
+    var prices = new EnumMap<AssetSymbol, BigDecimal>(AssetSymbol.class);
+    boolean usedInitialPrice = false;
+
+    for (var symbol : AssetSymbol.values()) {
+      var latest = snapshots.findFirstBySymbolOrderByRecordedAtDesc(symbol);
+      if (latest.isPresent()) {
+        prices.put(symbol, latest.get().getPriceUsd());
+      } else {
+        prices.put(symbol, initial.get(symbol));
+        usedInitialPrice = true;
+      }
     }
 
-    @Scheduled(fixedDelayString = "${app.ticker.interval-ms}")
-    public void tick() {
-        MarketPrices current;
-        try { current = market.getCurrent(); } catch (Exception ex) { bootstrap(); return; }
-
-        var currentMap = new EnumMap<AssetSymbol, BigDecimal>(AssetSymbol.class);
-        for (var s : AssetSymbol.values()) {
-            currentMap.put(s, current.prices().get(s.name()));
-        }
-
-        var next = dataProvider.nextPrices(currentMap);
-        var now = Instant.now();
-        writer.write(next, now);
-        market.overwrite(next, now);
-        messaging.convertAndSend("/topic/market/prices", market.getCurrent());
+    var now = Instant.now();
+    market.overwrite(prices, now);
+    if (usedInitialPrice) {
+      writer.write(prices, now);
     }
+  }
+
+  @Scheduled(fixedDelayString="${app.ticker.interval-ms}")
+  public void tick() {
+    MarketPrices current;
+    try {
+      current = market.getCurrent();
+    } catch (Exception exception) {
+      bootstrap();
+      return;
+    }
+
+    var prices = new EnumMap<AssetSymbol, BigDecimal>(AssetSymbol.class);
+    for (var symbol : AssetSymbol.values()) {
+      prices.put(symbol, current.prices().get(symbol.name()));
+    }
+    writer.write(prices, Instant.now());
+  }
 }

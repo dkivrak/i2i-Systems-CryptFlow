@@ -7,7 +7,7 @@ export default function AuthPage({ onAuth }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -23,6 +23,8 @@ export default function AuthPage({ onAuth }) {
           method: 'POST',
           body: JSON.stringify(form)
         });
+        sessionStorage.setItem('cryptflow_firstName', form.firstName);
+        sessionStorage.setItem('cryptflow_lastName', form.lastName);
         setMode('login');
         setNotice(t('auth.accountReady'));
       } else {
@@ -82,6 +84,30 @@ export default function AuthPage({ onAuth }) {
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
+            {mode === 'register' && (
+              <>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">{t('auth.firstName')}</span>
+                  <input
+                    className="input"
+                    type="text"
+                    required
+                    value={form.firstName}
+                    onChange={e => setForm({ ...form, firstName: e.target.value })}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-300">{t('auth.lastName')}</span>
+                  <input
+                    className="input"
+                    type="text"
+                    required
+                    value={form.lastName}
+                    onChange={e => setForm({ ...form, lastName: e.target.value })}
+                  />
+                </label>
+              </>
+            )}
             <label className="block">
               <span className="mb-2 block text-sm text-slate-300">{t('auth.email')}</span>
               <input

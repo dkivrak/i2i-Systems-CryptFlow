@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
 import { api, token } from '../api/client';
 import { useMarketStream } from '../hooks/useMarketStream';
 import TradeModal from '../components/TradeModal';
@@ -11,8 +12,8 @@ const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL'];
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
-  const { market, status, error: marketError } = useMarketStream();
-  
+  const { market, status, symbolStatuses, error: marketError } = useMarketStream();
+
   const [me, setMe] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
   const [trades, setTrades] = useState([]);
@@ -26,14 +27,14 @@ export default function DashboardPage({ onLogout }) {
 
   const refresh = useCallback(async () => {
     try {
-      const [m, p, t] = await Promise.all([
+      const [m, p, tRes] = await Promise.all([
         api('/me'),
         api('/portfolio'),
         api('/trades?size=20')
       ]);
       setMe(m);
       setPortfolio(p);
-      setTrades(t.content || []);
+      setTrades(tRes.content || []);
       setError('');
     } catch (e) {
       setError(e.message);
@@ -55,17 +56,15 @@ export default function DashboardPage({ onLogout }) {
     }
   }
 
-  /* Lock the price and portfolio info when opening the modal */
-  function openTradeModal(symbol){
-    const lockedPrice = Number(market?.prices?.[symbol] || 0);
-    const asset = portfolio?.assets?.find(a => a.symbol === symbol);
-    const assetQuantity = Number(asset?.quantity || 0);
-    const usdBalance = Number(portfolio?.usdBalance || 0);
-    setModal({ symbol, lockedPrice, usdBalance, assetQuantity });
-  }
-
   if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1fc8a4] border-t-transparent" /></div>;
 
+  const STREAM_STATUS_VIEW = {
+    live: { dot: 'bg-emerald-400', label: t('dashboard.live') },
+    connecting: { dot: 'bg-amber-300 animate-pulse', label: t('dashboard.connecting') },
+    stale: { dot: 'bg-orange-400', label: t('dashboard.stale') },
+    offline: { dot: 'bg-rose-400', label: t('dashboard.offline') }
+  };
+  const streamView = STREAM_STATUS_VIEW[status] || STREAM_STATUS_VIEW.offline;
   const dateLocale = currentLang === 'tr' ? 'tr-TR' : 'en-US';
 
   return (
@@ -117,10 +116,8 @@ export default function DashboardPage({ onLogout }) {
             </div>
 
             <div className="flex items-center gap-2 text-xs">
-              <span className={`h-2 w-2 rounded-full ${status === 'live' ? 'bg-emerald-400' : status === 'connecting' ? 'bg-amber-300 animate-pulse' : 'bg-rose-400'}`} />
-              <span className="hidden sm:inline text-slate-400">
-                {status === 'live' ? t('dashboard.live') : status === 'connecting' ? t('dashboard.connecting') : t('dashboard.disconnected')}
-              </span>
+              <span className={`h-2 w-2 rounded-full ${streamView.dot}`} />
+              <span className="hidden sm:inline text-slate-400">{streamView.label}</span>
             </div>
             <button
               onClick={() => setShowProfile(true)}
@@ -142,24 +139,21 @@ export default function DashboardPage({ onLogout }) {
         <section className="mb-6">
           <p className="label">{t('dashboard.portfolioOverview')}</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
-            {t('dashboard.hello')} <span className="text-[#1fc8a4]">{me?.email?.split('@')[0]}</span>
+            {t('dashboard.hello')}{' '}
+            <span className="text-[#1fc8a4]">
+              {sessionStorage.getItem('cryptflow_firstName') && sessionStorage.getItem('cryptflow_lastName')
+                ? `${sessionStorage.getItem('cryptflow_firstName')} ${sessionStorage.getItem('cryptflow_lastName')}`
+                : me?.email?.split('@')[0]}
+            </span>
           </h1>
           <p className="mt-2 text-slate-400">{t('dashboard.marketOpenDesc')}</p>
         </section>
 
-        {/* 3-Card Summary Panel */}
+        {/* Total Equity Summary */}
         <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
           <div className="card rounded-2xl p-5">
             <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
             <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.totalValueUsd)}</p>
-          </div>
-          <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">{t('dashboard.availableCash')}</p>
-            <p className="mt-2 text-2xl font-black text-[#1fc8a4]">{money(portfolio?.usdBalance)}</p>
-          </div>
-          <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">{t('dashboard.portfolioValue')}</p>
-            <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.assetValueUsd)}</p>
           </div>
         </section>
 
@@ -174,7 +168,8 @@ export default function DashboardPage({ onLogout }) {
           {[
             ['market', t('dashboard.tabMarket')],
             ['portfolio', t('dashboard.tabPortfolio')],
-            ['history', t('dashboard.tabTransactions')]
+            ['history', t('dashboard.tabTransactions')],
+            ['chat', t('dashboard.tabGemini')]
           ].map(([id, label]) => (
             <button
               key={id}
@@ -189,17 +184,18 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={openTradeModal} t={t} dateLocale={dateLocale} />}
+        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} />}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
+        {tab === 'chat' && <ChatPanel />}
       </main>
 
       {modal && (
         <TradeModal
-          symbol={modal.symbol}
-          lockedPrice={modal.lockedPrice}
-          usdBalance={modal.usdBalance}
-          assetQuantity={modal.assetQuantity}
+          symbol={modal}
+          livePrice={market?.prices?.[modal]}
+          priceStatus={symbolStatuses?.[modal]}
+          portfolio={portfolio}
           onClose={() => setModal(null)}
           onComplete={refresh}
         />
@@ -236,14 +232,16 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale }) {
               <p className="mt-6 label">{s} / USD</p>
               <p className="mt-1 text-3xl font-black">{money(market?.prices?.[s])}</p>
               <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
-                {t('dashboard.holding')} <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
+                {t('dashboard.holding')}{' '}
+                <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
               </div>
             </button>
           );
         })}
       </div>
       <p className="mt-4 text-xs text-slate-600">
-        {t('dashboard.lastPriceUpdate')} {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
+        {t('dashboard.lastPriceUpdate')}{' '}
+        {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
       </p>
     </div>
   );
@@ -251,22 +249,29 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale }) {
 
 function PortfolioPanel({ data, t }) {
   return (
-    <div className="card overflow-hidden rounded-2xl">
-      <div className="border-b border-white/10 p-6">
-        <p className="label">{t('dashboard.assetAllocation')}</p>
+    <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
+      <div className="card rounded-2xl p-6">
+        <p className="label">{t('dashboard.availableCash')}</p>
+        <p className="mt-3 text-4xl font-black">{money(data?.usdBalance)}</p>
+        <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
       </div>
-      <div className="divide-y divide-white/5">
-        {data?.assets && data.assets.length > 0 ? (
-          data.assets.map(a => (
-            <div key={a.symbol} className="grid grid-cols-3 border-b border-white/5 px-6 py-5 last:border-0 items-center">
-              <b className="text-sm">{a.symbol}</b>
-              <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
-              <span className="text-right text-sm font-bold text-white">{money(a.valueUsd)}</span>
-            </div>
-          ))
-        ) : (
-          <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
-        )}
+      <div className="card overflow-hidden rounded-2xl">
+        <div className="border-b border-white/10 p-6">
+          <p className="label">{t('dashboard.assetAllocation')}</p>
+        </div>
+        <div className="divide-y divide-white/5">
+          {data?.assets && data.assets.length > 0 ? (
+            data.assets.map(a => (
+              <div key={a.symbol} className="grid grid-cols-3 border-b border-white/5 px-6 py-5 last:border-0 items-center">
+                <b className="text-sm">{a.symbol}</b>
+                <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
+                <span className="text-right text-sm font-bold text-white">{money(a.valueUsd)}</span>
+              </div>
+            ))
+          ) : (
+            <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -305,6 +310,103 @@ function HistoryPanel({ trades, t, dateLocale }) {
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function ChatPanel() {
+  const { t } = useTranslation();
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function send(e) {
+    e.preventDefault();
+    if (!message.trim()) return;
+    const q = message;
+    setMessages(v => [...v, { role: 'user', text: q }]);
+    setMessage('');
+    setBusy(true);
+    setError('');
+    try {
+      const r = await api('/chat/query', {
+        method: 'POST',
+        body: JSON.stringify({ message: q })
+      });
+      setMessages(v => [...v, { role: 'ai', text: r.answer }]);
+    } catch (x) {
+      setError(x.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="card rounded-2xl p-5">
+        <div className="min-h-[360px] space-y-4">
+          {!messages.length && (
+            <div className="grid min-h-[340px] place-items-center text-center">
+              <div>
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#1fc8a4]/10 text-2xl text-[#1fc8a4]">
+                  ✦
+                </div>
+                <h3 className="mt-4 text-xl font-bold">{t('chat.askAboutPortfolio')}</h3>
+                <p className="mt-2 max-w-sm text-slate-500">{t('chat.geminiContext')}</p>
+              </div>
+            </div>
+          )}
+          {messages.map((m, i) => (
+            <div key={i} className={`max-w-[85%] rounded-2xl p-4 text-sm leading-6 ${m.role === 'user' ? 'ml-auto bg-[#1fc8a4] text-[#06140f]' : 'bg-[#101f2f] text-slate-200'}`}>
+              {m.role === 'user' ? (
+                <div className="whitespace-pre-wrap">{m.text}</div>
+              ) : (
+                <ReactMarkdown
+                  components={{
+                    ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-1" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-1" {...props} />,
+                    li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
+                    p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
+                    a: ({ node, ...props }) => <a className="text-[#1fc8a4] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
+                  }}
+                >
+                  {m.text}
+                </ReactMarkdown>
+              )}
+            </div>
+          ))}
+          {busy && (
+            <div className="w-48 animate-pulse rounded-2xl bg-[#101f2f] p-4">
+              <div className="h-2 rounded bg-slate-700" />
+              <div className="mt-2 h-2 w-2/3 rounded bg-slate-700" />
+            </div>
+          )}
+        </div>
+        {error && <p className="my-3 text-sm text-red-300">{error}</p>}
+        <form onSubmit={send} className="mt-4 flex gap-3 border-t border-white/10 pt-4">
+          <input
+            className="input"
+            maxLength="2000"
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder={t('chat.chatInputPlaceholder')}
+          />
+          <button disabled={busy} className="btn btn-primary">
+            {t('chat.sendButton')}
+          </button>
+        </form>
+      </div>
+      <aside className="card h-fit rounded-2xl p-6">
+        <p className="label">{t('chat.aiContextTitle')}</p>
+        <ul className="mt-4 space-y-3 text-sm text-slate-400">
+          <li>{t('chat.usdAndPortfolio')}</li>
+          <li>{t('chat.recent20Trades')}</li>
+          <li>{t('chat.currentPrices')}</li>
+          <li>{t('chat.priceTrends')}</li>
+        </ul>
+      </aside>
     </div>
   );
 }
