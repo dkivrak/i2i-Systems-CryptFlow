@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import ReactMarkdown from 'react-markdown';
 import { api, token } from '../api/client';
 import { useMarketStream } from '../hooks/useMarketStream';
 import TradeModal from '../components/TradeModal';
@@ -168,8 +167,7 @@ export default function DashboardPage({ onLogout }) {
           {[
             ['market', t('dashboard.tabMarket')],
             ['portfolio', t('dashboard.tabPortfolio')],
-            ['history', t('dashboard.tabTransactions')],
-            ['chat', t('dashboard.tabGemini')]
+            ['history', t('dashboard.tabTransactions')]
           ].map(([id, label]) => (
             <button
               key={id}
@@ -187,7 +185,6 @@ export default function DashboardPage({ onLogout }) {
         {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} />}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
-        {tab === 'chat' && <ChatPanel />}
       </main>
 
       {modal && (
@@ -314,99 +311,4 @@ function HistoryPanel({ trades, t, dateLocale }) {
   );
 }
 
-function ChatPanel() {
-  const { t } = useTranslation();
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
 
-  async function send(e) {
-    e.preventDefault();
-    if (!message.trim()) return;
-    const q = message;
-    setMessages(v => [...v, { role: 'user', text: q }]);
-    setMessage('');
-    setBusy(true);
-    setError('');
-    try {
-      const r = await api('/chat/query', {
-        method: 'POST',
-        body: JSON.stringify({ message: q })
-      });
-      setMessages(v => [...v, { role: 'ai', text: r.answer }]);
-    } catch (x) {
-      setError(x.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="card rounded-2xl p-5">
-        <div className="min-h-[360px] space-y-4">
-          {!messages.length && (
-            <div className="grid min-h-[340px] place-items-center text-center">
-              <div>
-                <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#1fc8a4]/10 text-2xl text-[#1fc8a4]">
-                  ✦
-                </div>
-                <h3 className="mt-4 text-xl font-bold">{t('chat.askAboutPortfolio')}</h3>
-                <p className="mt-2 max-w-sm text-slate-500">{t('chat.geminiContext')}</p>
-              </div>
-            </div>
-          )}
-          {messages.map((m, i) => (
-            <div key={i} className={`max-w-[85%] rounded-2xl p-4 text-sm leading-6 ${m.role === 'user' ? 'ml-auto bg-[#1fc8a4] text-[#06140f]' : 'bg-[#101f2f] text-slate-200'}`}>
-              {m.role === 'user' ? (
-                <div className="whitespace-pre-wrap">{m.text}</div>
-              ) : (
-                <ReactMarkdown
-                  components={{
-                    ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-1" {...props} />,
-                    ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-1" {...props} />,
-                    li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
-                    p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0" {...props} />,
-                    strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
-                    a: ({ node, ...props }) => <a className="text-[#1fc8a4] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
-                  }}
-                >
-                  {m.text}
-                </ReactMarkdown>
-              )}
-            </div>
-          ))}
-          {busy && (
-            <div className="w-48 animate-pulse rounded-2xl bg-[#101f2f] p-4">
-              <div className="h-2 rounded bg-slate-700" />
-              <div className="mt-2 h-2 w-2/3 rounded bg-slate-700" />
-            </div>
-          )}
-        </div>
-        {error && <p className="my-3 text-sm text-red-300">{error}</p>}
-        <form onSubmit={send} className="mt-4 flex gap-3 border-t border-white/10 pt-4">
-          <input
-            className="input"
-            maxLength="2000"
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder={t('chat.chatInputPlaceholder')}
-          />
-          <button disabled={busy} className="btn btn-primary">
-            {t('chat.sendButton')}
-          </button>
-        </form>
-      </div>
-      <aside className="card h-fit rounded-2xl p-6">
-        <p className="label">{t('chat.aiContextTitle')}</p>
-        <ul className="mt-4 space-y-3 text-sm text-slate-400">
-          <li>{t('chat.usdAndPortfolio')}</li>
-          <li>{t('chat.recent20Trades')}</li>
-          <li>{t('chat.currentPrices')}</li>
-          <li>{t('chat.priceTrends')}</li>
-        </ul>
-      </aside>
-    </div>
-  );
-}
