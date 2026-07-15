@@ -12,39 +12,3 @@
 /* Scrollbar styling for chat */
 .overflow-y-auto::-webkit-scrollbar{width:6px}.overflow-y-auto::-webkit-scrollbar-track{background:transparent}.overflow-y-auto::-webkit-scrollbar-thumb{background:#243c50;border-radius:3px}.overflow-y-auto::-webkit-scrollbar-thumb:hover{background:#2f5069}
 
-/* Google Translate styling integration */
-.google-translate-container {
-  min-height: 42px;
-}
-.google-translate-container select {
-  width: 100% !important;
-  border: 1px solid #243c50 !important;
-  background: #091725 !important;
-  color: #eef7f5 !important;
-  border-radius: 0.75rem !important;
-  padding: 0.5rem 0.75rem !important;
-  outline: none !important;
-  font-size: 0.875rem !important;
-}
-iframe.skiptranslate,
-iframe[class*="goog"],
-.goog-te-banner-frame,
-.goog-te-banner-frame.skiptranslate,
-#goog-gt-tt,
-.goog-te-balloon-frame,
-.goog-te-banner {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  width: 0 !important;
-  opacity: 0 !important;
-}
-body {
-  top: 0px !important;
-  position: static !important;
-}
-html {
-  top: 0px !important;
-}
-
-

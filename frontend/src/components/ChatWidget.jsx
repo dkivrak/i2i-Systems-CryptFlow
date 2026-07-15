@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import ReactMarkdown from 'react-markdown'
 import { api } from '../api/client'
 
-const suggestions = [
-  'What is the risk distribution of my portfolio?',
-  'Summarize my recent transactions',
-  'Which asset should I invest in?',
-  'What is my wallet balance?'
-]
-
 export default function ChatWidget() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
@@ -16,6 +12,13 @@ export default function ChatWidget() {
   const [error, setError] = useState('')
   const chatEndRef = useRef(null)
   const inputRef = useRef(null)
+
+  const suggestions = [
+    t('chat.suggestion1'),
+    t('chat.suggestion2'),
+    t('chat.suggestion3'),
+    t('chat.suggestion4')
+  ]
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, busy])
   useEffect(() => { if (open) inputRef.current?.focus() }, [open])
@@ -49,7 +52,7 @@ export default function ChatWidget() {
     <button
       onClick={() => setOpen(v => !v)}
       className="fixed bottom-6 right-6 z-[60] grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-[#1fc8a4] to-emerald-600 text-xl text-white shadow-[0_8px_30px_rgba(31,200,164,.4)] transition-all hover:scale-110 hover:shadow-[0_8px_40px_rgba(31,200,164,.55)] active:scale-95"
-      aria-label={open ? 'Close chat' : 'AI Assistant'}
+      aria-label={open ? t('chat.closeChat') : t('chat.aiAssistant')}
     >
       {open
         ? <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -67,7 +70,7 @@ export default function ChatWidget() {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-          <span className="text-[11px] text-slate-500">Online</span>
+          <span className="text-[11px] text-slate-500">{t('chat.online')}</span>
         </div>
       </div>
 
@@ -76,8 +79,8 @@ export default function ChatWidget() {
         {!messages.length && <div className="flex h-full items-center justify-center text-center">
           <div>
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-[#1fc8a4]/20 to-emerald-900/20 text-2xl text-[#1fc8a4] ring-1 ring-[#1fc8a4]/20">✦</div>
-            <h3 className="mt-4 text-base font-bold text-white">Ask about your portfolio</h3>
-            <p className="mt-1.5 text-xs text-slate-500 max-w-[260px] mx-auto leading-relaxed">Gemini uses current prices and transaction history as context.</p>
+            <h3 className="mt-4 text-base font-bold text-white">{t('chat.askAboutPortfolio')}</h3>
+            <p className="mt-1.5 text-xs text-slate-500 max-w-[260px] mx-auto leading-relaxed">{t('chat.geminiContext')}</p>
             <div className="mt-5 flex flex-wrap justify-center gap-1.5">
               {suggestions.map((s, i) => <button key={i} onClick={() => useSuggestion(s)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-400 transition hover:border-[#1fc8a4]/40 hover:bg-[#1fc8a4]/10 hover:text-[#1fc8a4]">{s}</button>)}
             </div>
@@ -86,7 +89,34 @@ export default function ChatWidget() {
 
         {messages.map((m, i) => <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
           {m.role === 'ai' && <div className="mr-2 mt-1 grid h-6 w-6 flex-shrink-0 place-items-center rounded-lg bg-[#1fc8a4]/10 text-[10px] text-[#1fc8a4]">✦</div>}
-          <div className={`max-w-[82%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-[#1fc8a4] text-[#06140f] rounded-br-md' : 'bg-[#12243a] text-slate-200 rounded-bl-md ring-1 ring-white/5'}`}>{m.text}</div>
+          <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-[#1fc8a4] text-[#06140f] rounded-br-md' : 'bg-[#12243a] text-slate-200 rounded-bl-md ring-1 ring-white/5'}`}>
+            {m.role === 'user' ? (
+              <div className="whitespace-pre-wrap">{m.text}</div>
+            ) : (
+              <ReactMarkdown
+                components={{
+                  ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-1" {...props} />,
+                  ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-1" {...props} />,
+                  li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
+                  p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
+                  a: ({ node, ...props }) => <a className="text-[#1fc8a4] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                  code: ({ node, className, children, ...props }) => {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return match ? (
+                      <pre className="bg-black/30 rounded p-2 my-2 overflow-x-auto font-mono text-[11px] text-slate-300">
+                        <code className={className} {...props}>{children}</code>
+                      </pre>
+                    ) : (
+                      <code className="bg-white/10 rounded px-1.5 py-0.5 text-emerald-400 font-mono text-[11px]" {...props}>{children}</code>
+                    )
+                  }
+                }}
+              >
+                {m.text}
+              </ReactMarkdown>
+            )}
+          </div>
         </div>)}
 
         {busy && <div className="flex items-start gap-2">
@@ -106,7 +136,7 @@ export default function ChatWidget() {
 
       {/* Input */}
       <form onSubmit={send} className="flex items-center gap-2 border-t border-white/10 bg-[#0c1f33] px-4 py-3">
-        <input ref={inputRef} className="flex-1 rounded-lg border border-white/10 bg-[#091725] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-[#1fc8a4] focus:ring-1 focus:ring-[#1fc8a4]/30" maxLength="2000" value={message} onChange={e => setMessage(e.target.value)} placeholder="Ask anything..." />
+        <input ref={inputRef} className="flex-1 rounded-lg border border-white/10 bg-[#091725] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-[#1fc8a4] focus:ring-1 focus:ring-[#1fc8a4]/30" maxLength="2000" value={message} onChange={e => setMessage(e.target.value)} placeholder={t('chat.askAnything')} />
         <button disabled={busy || !message.trim()} className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg bg-[#1fc8a4] text-[#06140f] transition hover:bg-[#4bdfc0] disabled:opacity-40 disabled:cursor-not-allowed">
           {busy
             ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

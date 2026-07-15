@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, token } from '../api/client';
 import { useMarketStream } from '../hooks/useMarketStream';
 import TradeModal from '../components/TradeModal';
@@ -9,6 +10,7 @@ import { getCurrentLanguage, changeAppLanguage } from '../utils/language';
 const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL'];
 
 export default function DashboardPage({ onLogout }) {
+  const { t, i18n } = useTranslation();
   const { market, status, error: marketError } = useMarketStream();
   
   const [me, setMe] = useState(null);
@@ -20,9 +22,7 @@ export default function DashboardPage({ onLogout }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const currentLang = getCurrentLanguage();
-
-  const setLanguage = changeAppLanguage;
+  const currentLang = i18n.language;
 
   const refresh = useCallback(async () => {
     try {
@@ -66,6 +66,8 @@ export default function DashboardPage({ onLogout }) {
 
   if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1fc8a4] border-t-transparent" /></div>;
 
+  const dateLocale = currentLang === 'tr' ? 'tr-TR' : 'en-US';
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111f]/90 backdrop-blur-xl">
@@ -73,13 +75,13 @@ export default function DashboardPage({ onLogout }) {
           <div className="flex items-center gap-3">
             <span className="h-2.5 w-2.5 rounded-full bg-[#1fc8a4] shadow-[0_0_18px_#1fc8a4]" />
             <span className="font-black tracking-tight">CRYPTFLOW</span>
-            <span className="hidden sm:inline text-xs text-slate-600">/ MARKET LAB</span>
+            <span className="hidden sm:inline text-xs text-slate-600">{t('dashboard.marketLab')}</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
-            {/* Dil Seçimi (Bayraklar) */}
+            {/* Language flags */}
             <div className="flex items-center gap-2 border-r border-white/10 pr-4 sm:pr-6">
               <button
-                onClick={() => setLanguage('en')}
+                onClick={() => changeAppLanguage('en')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'en'
                     ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
@@ -97,7 +99,7 @@ export default function DashboardPage({ onLogout }) {
               </button>
               <div className="w-[1px] h-4 bg-white/10" />
               <button
-                onClick={() => setLanguage('tr')}
+                onClick={() => changeAppLanguage('tr')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'tr'
                     ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
@@ -117,7 +119,7 @@ export default function DashboardPage({ onLogout }) {
             <div className="flex items-center gap-2 text-xs">
               <span className={`h-2 w-2 rounded-full ${status === 'live' ? 'bg-emerald-400' : status === 'connecting' ? 'bg-amber-300 animate-pulse' : 'bg-rose-400'}`} />
               <span className="hidden sm:inline text-slate-400">
-                {status === 'live' ? 'Live' : status === 'connecting' ? 'Connecting' : 'Disconnected'}
+                {status === 'live' ? t('dashboard.live') : status === 'connecting' ? t('dashboard.connecting') : t('dashboard.disconnected')}
               </span>
             </div>
             <button
@@ -130,7 +132,7 @@ export default function DashboardPage({ onLogout }) {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </button>
-            <button onClick={logout} className="text-sm text-slate-400 hover:text-white transition-colors">Logout</button>
+            <button onClick={logout} className="text-sm text-slate-400 hover:text-white transition-colors">{t('dashboard.logout')}</button>
           </div>
         </div>
       </header>
@@ -138,25 +140,25 @@ export default function DashboardPage({ onLogout }) {
       <main className="mx-auto max-w-7xl px-5 py-8">
         {/* Welcome Header */}
         <section className="mb-6">
-          <p className="label">PORTFOLIO OVERVIEW</p>
+          <p className="label">{t('dashboard.portfolioOverview')}</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
-            Hello, <span className="text-[#1fc8a4]">{me?.email?.split('@')[0]}</span>
+            {t('dashboard.hello')} <span className="text-[#1fc8a4]">{me?.email?.split('@')[0]}</span>
           </h1>
-          <p className="mt-2 text-slate-400">The virtual market is open. Test your strategy without risk.</p>
+          <p className="mt-2 text-slate-400">{t('dashboard.marketOpenDesc')}</p>
         </section>
 
         {/* 3-Card Summary Panel */}
         <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
           <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">TOTAL EQUITY</p>
+            <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
             <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.totalValueUsd)}</p>
           </div>
           <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">AVAILABLE CASH</p>
+            <p className="label text-[10px] tracking-wider">{t('dashboard.availableCash')}</p>
             <p className="mt-2 text-2xl font-black text-[#1fc8a4]">{money(portfolio?.usdBalance)}</p>
           </div>
           <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">PORTFOLIO VALUE</p>
+            <p className="label text-[10px] tracking-wider">{t('dashboard.portfolioValue')}</p>
             <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.assetValueUsd)}</p>
           </div>
         </section>
@@ -170,9 +172,9 @@ export default function DashboardPage({ onLogout }) {
         {/* Tab Navigation */}
         <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-white/10" aria-label="Dashboard sections">
           {[
-            ['market', 'Market'],
-            ['portfolio', 'Portfolio'],
-            ['history', 'Transactions']
+            ['market', t('dashboard.tabMarket')],
+            ['portfolio', t('dashboard.tabPortfolio')],
+            ['history', t('dashboard.tabTransactions')]
           ].map(([id, label]) => (
             <button
               key={id}
@@ -187,9 +189,9 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={openTradeModal} />}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} />}
-        {tab === 'history' && <HistoryPanel trades={trades} />}
+        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={openTradeModal} t={t} dateLocale={dateLocale} />}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} />}
+        {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
 
       {modal && (
@@ -213,7 +215,7 @@ export default function DashboardPage({ onLogout }) {
   );
 }
 
-function MarketPanel({ market, portfolio, onTrade }) {
+function MarketPanel({ market, portfolio, onTrade, t, dateLocale }) {
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -229,29 +231,29 @@ function MarketPanel({ market, portfolio, onTrade }) {
                 <span className={`grid h-11 w-11 place-items-center rounded-full font-black ${
                   ['bg-amber-300 text-amber-950', 'bg-indigo-300 text-indigo-950', 'bg-fuchsia-300 text-fuchsia-950'][i]
                 }`}>{s[0]}</span>
-                <span className="text-xs text-slate-600">TRADE ↗</span>
+                <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
               </div>
               <p className="mt-6 label">{s} / USD</p>
               <p className="mt-1 text-3xl font-black">{money(market?.prices?.[s])}</p>
               <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
-                Holding <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
+                {t('dashboard.holding')} <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
               </div>
             </button>
           );
         })}
       </div>
       <p className="mt-4 text-xs text-slate-600">
-        Last price update: {market?.updatedAt ? new Date(market.updatedAt).toLocaleString('en-US') : 'waiting'}
+        {t('dashboard.lastPriceUpdate')} {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
       </p>
     </div>
   );
 }
 
-function PortfolioPanel({ data }) {
+function PortfolioPanel({ data, t }) {
   return (
     <div className="card overflow-hidden rounded-2xl">
       <div className="border-b border-white/10 p-6">
-        <p className="label">ASSET ALLOCATION</p>
+        <p className="label">{t('dashboard.assetAllocation')}</p>
       </div>
       <div className="divide-y divide-white/5">
         {data?.assets && data.assets.length > 0 ? (
@@ -263,42 +265,42 @@ function PortfolioPanel({ data }) {
             </div>
           ))
         ) : (
-          <p className="p-6 text-center text-sm text-slate-500">No assets found.</p>
+          <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
         )}
       </div>
     </div>
   );
 }
 
-function HistoryPanel({ trades }) {
+function HistoryPanel({ trades, t, dateLocale }) {
   return (
     <div className="card overflow-x-auto rounded-2xl">
       <table className="w-full min-w-[700px] text-left">
         <thead className="label border-b border-white/10">
           <tr>
-            <th className="p-5">Transaction</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>Total</th>
-            <th>Time</th>
+            <th className="p-5">{t('dashboard.colTransaction')}</th>
+            <th>{t('dashboard.colQuantity')}</th>
+            <th>{t('dashboard.colPrice')}</th>
+            <th>{t('dashboard.colTotal')}</th>
+            <th>{t('dashboard.colTime')}</th>
           </tr>
         </thead>
         <tbody>
           {trades.length ? (
-            trades.map(t => (
-              <tr key={t.id} className="border-b border-white/5">
-                <td className={`p-5 font-bold ${t.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {t.side} · {t.symbol}
+            trades.map(t2 => (
+              <tr key={t2.id} className="border-b border-white/5">
+                <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                  {t2.side} · {t2.symbol}
                 </td>
-                <td>{coin(t.quantity)}</td>
-                <td>{money(t.unitPriceUsd)}</td>
-                <td>{money(t.totalUsd)}</td>
-                <td className="text-slate-500">{new Date(t.executedAt).toLocaleString('en-US')}</td>
+                <td>{coin(t2.quantity)}</td>
+                <td>{money(t2.unitPriceUsd)}</td>
+                <td>{money(t2.totalUsd)}</td>
+                <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="5" className="p-10 text-center text-slate-500">No transactions yet.</td>
+              <td colSpan="5" className="p-10 text-center text-slate-500">{t('dashboard.noTransactions')}</td>
             </tr>
           )}
         </tbody>
@@ -306,5 +308,3 @@ function HistoryPanel({ trades }) {
     </div>
   );
 }
-
-

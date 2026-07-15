@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api, token } from '../api/client';
 
 export default function AuthPage({ onAuth }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ email: '', password: '' });
@@ -22,7 +24,7 @@ export default function AuthPage({ onAuth }) {
           body: JSON.stringify(form)
         });
         setMode('login');
-        setNotice('Account ready. You can log in now.');
+        setNotice(t('auth.accountReady'));
       } else {
         const r = await api('/auth/login', {
           method: 'POST',
@@ -48,17 +50,17 @@ export default function AuthPage({ onAuth }) {
           <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
         </div>
         <div>
-          <p className="label mb-5">PAPER MARKET LAB</p>
+          <p className="label mb-5">{t('auth.paperMarketLab')}</p>
           <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em]">
-            Move with the market.<br />
-            <span className="text-[#1fc8a4]">Learn without the risk.</span>
+            {t('auth.moveWithMarket')}<br />
+            <span className="text-[#1fc8a4]">{t('auth.learnWithoutRisk')}</span>
           </h1>
           <p className="mt-7 max-w-lg text-lg leading-8 text-slate-400">
-            Trade BTC, ETH, and SOL virtual assets. Monitor the live stream, backtest your portfolio, and receive context-aware AI insights.
+            {t('auth.heroDescription')}
           </p>
         </div>
         <p className="text-sm text-slate-600">
-          Educational purposes only — not financial advice.
+          {t('auth.disclaimer')}
         </p>
       </section>
 
@@ -70,18 +72,18 @@ export default function AuthPage({ onAuth }) {
           </div>
 
           <p className="label">
-            {mode === 'login' ? 'WELCOME BACK' : 'START YOUR LAB'}
+            {mode === 'login' ? t('auth.welcomeBack') : t('auth.startYourLab')}
           </p>
           <h2 className="mt-2 text-3xl font-black">
-            {mode === 'login' ? 'Return to the market.' : 'Create your account.'}
+            {mode === 'login' ? t('auth.returnToMarket') : t('auth.createAccount')}
           </h2>
           <p className="mt-2 text-slate-400">
-            {mode === 'login' ? 'Secure entry into your simulation portfolio.' : 'Your starting balance will be automatically provisioned.'}
+            {mode === 'login' ? t('auth.secureEntry') : t('auth.autoProvisioned')}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
             <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">Email</span>
+              <span className="mb-2 block text-sm text-slate-300">{t('auth.email')}</span>
               <input
                 className="input"
                 type="email"
@@ -91,7 +93,7 @@ export default function AuthPage({ onAuth }) {
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">Password</span>
+              <span className="mb-2 block text-sm text-slate-300">{t('auth.password')}</span>
               <input
                 className="input"
                 type="password"
@@ -117,7 +119,7 @@ export default function AuthPage({ onAuth }) {
               disabled={busy}
               className="btn btn-primary w-full"
             >
-              {busy ? 'Processing...' : mode === 'login' ? 'Log in' : 'Register'}
+              {busy ? t('auth.processing') : mode === 'login' ? t('auth.login') : t('auth.register')}
             </button>
           </form>
 
@@ -129,7 +131,7 @@ export default function AuthPage({ onAuth }) {
               setNotice('');
             }}
           >
-            {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Log in'}
+            {mode === 'login' ? t('auth.noAccountRegister') : t('auth.haveAccountLogin')}
           </button>
         </div>
       </section>
