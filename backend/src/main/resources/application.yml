@@ -38,6 +38,3 @@ app:
     api-key: ${GEMINI_API_KEY:}
     model: ${GEMINI_MODEL:gemini-2.5-flash}
     timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:15}
-logging.level.org.springframework.web: DEBUG
-logging.level.org.springframework.web.socket: DEBUG
-
