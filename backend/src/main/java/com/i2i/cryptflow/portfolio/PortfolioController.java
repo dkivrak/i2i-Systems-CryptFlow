@@ -7,7 +7,8 @@ import java.util.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-@RestController @RequestMapping("/api/portfolio")
+@RestController
+@RequestMapping("/api/portfolio")
 public class PortfolioController {
   private final WalletRepository wallets;
   private final PortfolioAssetRepository assets;
@@ -19,7 +20,8 @@ public class PortfolioController {
     this.market = market;
   }
 
-  @GetMapping PortfolioResponse get(@AuthenticationPrincipal UUID userId) {
+  @GetMapping
+  PortfolioResponse get(@AuthenticationPrincipal UUID userId) {
     var wallet = wallets.findByUserId(userId).orElseThrow();
     var prices = market.getCurrent().prices();
     var items = assets.findByWalletIdOrderBySymbol(wallet.getId()).stream()
@@ -36,6 +38,6 @@ public class PortfolioController {
     return new PortfolioResponse(wallet.getUsdBalance(), items, assetTotal, wallet.getUsdBalance().add(assetTotal));
   }
 
-  public record AssetItem(String symbol,BigDecimal quantity,BigDecimal priceUsd,BigDecimal valueUsd){}
-  public record PortfolioResponse(BigDecimal usdBalance,List<AssetItem> assets,BigDecimal assetValueUsd,BigDecimal totalValueUsd){}
+  public record AssetItem(String symbol, BigDecimal quantity, BigDecimal priceUsd, BigDecimal valueUsd) {}
+  public record PortfolioResponse(BigDecimal usdBalance, List<AssetItem> assets, BigDecimal assetValueUsd, BigDecimal totalValueUsd) {}
 }

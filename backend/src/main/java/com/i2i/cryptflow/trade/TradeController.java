@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-@RestController @RequestMapping("/api/trades")
+@RestController
+@RequestMapping("/api/trades")
 public class TradeController {
   private static final int DEFAULT_PAGE_SIZE = 20;
 
@@ -20,10 +21,21 @@ public class TradeController {
     this.service = service;
   }
 
-  @PostMapping @ResponseStatus(HttpStatus.CREATED)
-  TradeService.TradeResult execute(@AuthenticationPrincipal UUID userId,@Valid @RequestBody TradeRequest r){return service.execute(userId,r.symbol(),r.side(),r.quantity());}
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  TradeService.TradeResult execute(
+      @AuthenticationPrincipal UUID userId,
+      @Valid @RequestBody TradeRequest r) {
+    return service.execute(userId, r.symbol(), r.side(), r.quantity());
+  }
 
-  @GetMapping Page<TradeService.TradeResult> history(@AuthenticationPrincipal UUID userId,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue=""+DEFAULT_PAGE_SIZE) int size){return service.history(userId,page,size);}
+  @GetMapping
+  Page<TradeService.TradeResult> history(
+      @AuthenticationPrincipal UUID userId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size) {
+    return service.history(userId, page, size);
+  }
 
-  public record TradeRequest(@NotNull AssetSymbol symbol,@NotNull TradeSide side,@NotNull BigDecimal quantity){}
+  public record TradeRequest(@NotNull AssetSymbol symbol, @NotNull TradeSide side, @NotNull BigDecimal quantity) {}
 }

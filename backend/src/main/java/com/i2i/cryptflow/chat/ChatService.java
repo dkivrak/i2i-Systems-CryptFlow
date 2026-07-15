@@ -64,18 +64,39 @@ public class ChatService {
     var prompt = new StringBuilder(SYSTEM_PROMPT)
       .append("USER EMAIL: ").append(user.getEmail())
       .append("\nUSD BALANCE: ").append(wallet.getUsdBalance())
-      .append("\nPORTFOLIO: ").append(assets.findByWalletIdOrderBySymbol(wallet.getId()).stream().map(a -> a.getSymbol() + "=" + a.getQuantity()).toList())
+      .append("\nPORTFOLIO: ").append(formatPortfolio(wallet.getId()))
       .append("\nCURRENT PRICES: ").append(market.getCurrent())
-      .append("\nRECENT TRADES: ").append(trades.findTop20ByUserIdOrderByExecutedAtDesc(user.getId()).stream().map(t -> t.getSide() + " " + t.getQuantity() + " " + t.getSymbol() + " @ " + t.getUnitPriceUsd()).toList());
+      .append("\nRECENT TRADES: ").append(formatRecentTrades(user.getId()));
     
     for (var symbol : AssetSymbol.values()) {
-      prompt.append("\n").append(symbol).append(" RECENT PRICES: ").append(snapshots.findTop20BySymbolOrderByRecordedAtDesc(symbol).stream().map(PriceSnapshot::getPriceUsd).toList());
+      prompt.append("\n").append(symbol).append(" RECENT PRICES: ").append(formatPriceHistory(symbol));
     }
     
     prompt.append("\n\nUSER QUESTION: ").append(message)
       .append("\nInclude this exact final line: ").append(DISCLAIMER);
       
     return prompt.toString();
+  }
+
+  private String formatPortfolio(UUID walletId) {
+    return assets.findByWalletIdOrderBySymbol(walletId).stream()
+        .map(a -> a.getSymbol() + "=" + a.getQuantity())
+        .toList()
+        .toString();
+  }
+
+  private String formatRecentTrades(UUID userId) {
+    return trades.findTop20ByUserIdOrderByExecutedAtDesc(userId).stream()
+        .map(t -> t.getSide() + " " + t.getQuantity() + " " + t.getSymbol() + " @ " + t.getUnitPriceUsd())
+        .toList()
+        .toString();
+  }
+
+  private String formatPriceHistory(AssetSymbol symbol) {
+    return snapshots.findTop20BySymbolOrderByRecordedAtDesc(symbol).stream()
+        .map(PriceSnapshot::getPriceUsd)
+        .toList()
+        .toString();
   }
 
   private String ensureDisclaimer(String answer) {
@@ -87,4 +108,3 @@ public class ChatService {
 
   public record ChatResponse(String answer, String disclaimer, Instant generatedAt) {}
 }
-

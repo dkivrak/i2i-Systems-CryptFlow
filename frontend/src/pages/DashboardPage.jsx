@@ -8,6 +8,7 @@ import { money, coin } from '../utils/format';
 import { getCurrentLanguage, changeAppLanguage } from '../utils/language';
 
 const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL'];
+const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
@@ -29,7 +30,7 @@ export default function DashboardPage({ onLogout }) {
       const [m, p, tRes] = await Promise.all([
         api('/me'),
         api('/portfolio'),
-        api('/trades?size=20')
+        api(`/trades?size=${DEFAULT_TRADE_PAGE_SIZE}`)
       ]);
       setMe(m);
       setPortfolio(p);
