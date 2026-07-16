@@ -8,7 +8,7 @@ import java.time.Instant;
 public class PriceSnapshot {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
   @Column(nullable=false, length=10) private String symbol;
-  @Column(name="price_usd", nullable=false, precision=19, scale=2) private BigDecimal priceUsd;
+  @Column(name="price_usd", nullable=false, precision=28, scale=8) private BigDecimal priceUsd;
   @Column(name="recorded_at", nullable=false) private Instant recordedAt;
   protected PriceSnapshot() {}
   public PriceSnapshot(String symbol, BigDecimal price, Instant time){this.symbol=symbol;priceUsd=price;recordedAt=time;}

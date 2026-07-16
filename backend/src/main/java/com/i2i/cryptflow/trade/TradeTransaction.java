@@ -15,7 +15,7 @@ public class TradeTransaction {
   @Column(nullable=false, length=10) private String symbol;
   @Enumerated(EnumType.STRING) @Column(nullable=false) private TradeSide side;
   @Column(nullable=false, precision=28, scale=8) private BigDecimal quantity;
-  @Column(name="unit_price_usd", nullable=false, precision=19, scale=2) private BigDecimal unitPriceUsd;
+  @Column(name="unit_price_usd", nullable=false, precision=28, scale=8) private BigDecimal unitPriceUsd;
   @Column(name="total_usd", nullable=false, precision=19, scale=2) private BigDecimal totalUsd;
   @Column(name="executed_at", nullable=false) private Instant executedAt;
 
