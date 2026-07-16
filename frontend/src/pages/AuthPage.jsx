@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, token } from '../api/client';
+import { useMarketStream } from '../hooks/useMarketStream';
+import { money } from '../utils/format';
 
 export default function AuthPage({ onAuth }) {
   const { t } = useTranslation();
@@ -11,6 +13,7 @@ export default function AuthPage({ onAuth }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const { market, changes } = useMarketStream();
 
   async function submit(e) {
     e.preventDefault();
@@ -51,7 +54,7 @@ export default function AuthPage({ onAuth }) {
           <span className="h-3 w-3 rounded-full bg-[#1fc8a4] shadow-[0_0_20px_#1fc8a4]" />
           <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
         </div>
-        <div>
+        <div className="mt-8 mb-auto">
           <p className="label mb-5">{t('auth.paperMarketLab')}</p>
           <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em]">
             {t('auth.moveWithMarket')}<br />
@@ -60,8 +63,44 @@ export default function AuthPage({ onAuth }) {
           <p className="mt-7 max-w-lg text-lg leading-8 text-slate-400">
             {t('auth.heroDescription')}
           </p>
+
+          {/* Live Market Tickers */}
+          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/60 p-5 border border-white/5 space-y-4">
+            {['BTC', 'ETH', 'SOL'].map((symbol, idx) => {
+              const price = market?.prices?.[symbol];
+              const change = changes?.[symbol];
+              const coinName = { BTC: 'Bitcoin', ETH: 'Ethereum', SOL: 'Solana' }[symbol];
+              const colorClass = ['bg-amber-300 text-amber-950', 'bg-indigo-300 text-indigo-950', 'bg-fuchsia-300 text-fuchsia-950'][idx];
+
+              return (
+                <div key={symbol} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs ${colorClass}`}>
+                      {symbol[0]}
+                    </span>
+                    <div>
+                      <span className="font-bold text-white block">{symbol}</span>
+                      <span className="text-[10px] text-slate-500 block">{coinName}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-white block">
+                      {price ? money(price) : '...'}
+                    </span>
+                    {change !== undefined && (
+                      <span className={`text-xs font-bold block ${
+                        change >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 mt-6">
           {t('auth.disclaimer')}
         </p>
       </section>
