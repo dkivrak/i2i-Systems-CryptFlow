@@ -247,8 +247,21 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
         <form onSubmit={handleFormSubmit} className="mt-6">
           <label htmlFor="trade-quantity" className="text-sm text-slate-300">{t('trade.coinQuantity')}</label>
-          <div className="mt-2 text-sm text-slate-400">
-            {hasFreshPrice ? `${t('trade.livePrice')}: ${money(numericPrice)}` : t(unavailablePriceMessage)}
+          <div className="mt-2 text-sm text-slate-400 flex items-center gap-2">
+            {hasFreshPrice ? (
+              <>
+                <span>{t('trade.livePrice')}: <span className="text-white font-bold">{money(numericPrice)}</span></span>
+                {changePercent !== undefined && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    changePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                  }`}>
+                    {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+                  </span>
+                )}
+              </>
+            ) : (
+              t(unavailablePriceMessage)
+            )}
           </div>
           <div className="relative mt-2">
             <input
