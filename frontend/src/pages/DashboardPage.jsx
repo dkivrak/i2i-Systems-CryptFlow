@@ -389,10 +389,8 @@ function PortfolioPanel({ data, t, onTrade }) {
           <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
         </div>
         <div className="mt-6 border-t border-white/10 pt-4">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-400">{t('dashboard.totalCoinValue')}</span>
-            <span className="font-bold text-white">{money(totalCoinsValue)}</span>
-          </div>
+          <p className="label text-[10px] tracking-wider">{t('dashboard.totalCoinValue')}</p>
+          <p className="mt-1.5 text-2xl font-black text-white">{money(totalCoinsValue)}</p>
         </div>
       </div>
       <div className="card overflow-hidden rounded-2xl">
