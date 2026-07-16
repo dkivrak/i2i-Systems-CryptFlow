@@ -208,13 +208,6 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
               <p className="label text-[10px] tracking-wider">{t('trade.newOrder')}</p>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <h2 className="text-xl font-black text-white">{symbol} / USD</h2>
-                {changePercent !== undefined && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    changePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                  }`}>
-                    {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
-                  </span>
-                )}
               </div>
             </div>
           </div>

@@ -127,6 +127,11 @@ export default function DashboardPage({ onLogout }) {
   }
 
   if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1fc8a4] border-t-transparent" /></div>;
+  const liveTotalCryptoValue = portfolio?.assets?.reduce((sum, a) => {
+    const livePrice = Number(market?.prices?.[a.symbol] || 0);
+    return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
+  }, 0) || 0;
+  const liveTotalEquity = Number(portfolio?.usdBalance || 0) + liveTotalCryptoValue;
 
   const STREAM_STATUS_VIEW = {
     live: { dot: 'bg-emerald-400', label: t('dashboard.live') },
@@ -275,10 +280,10 @@ export default function DashboardPage({ onLogout }) {
         <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
           <div className="card rounded-2xl p-5">
             <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
-            <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.totalValueUsd)}</p>
+            <p className="mt-2 text-2xl font-black text-white">{money(liveTotalEquity)}</p>
           </div>
 
-          <AssetAllocationChart portfolio={portfolio} t={t} />
+          <AssetAllocationChart portfolio={portfolio} market={market} t={t} />
         </section>
 
         {(error || marketError) && (
@@ -308,7 +313,7 @@ export default function DashboardPage({ onLogout }) {
 
         {/* Tab Content */}
         {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} onTrade={setModal} />}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
 
@@ -382,8 +387,11 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
   );
 }
 
-function PortfolioPanel({ data, t, onTrade }) {
-  const totalCoinsValue = data?.assets?.reduce((sum, a) => sum + Number(a.valueUsd || 0), 0) || 0;
+function PortfolioPanel({ data, market, changes, t, onTrade }) {
+  const totalCoinsValue = data?.assets?.reduce((sum, a) => {
+    const livePrice = Number(market?.prices?.[a.symbol] || 0);
+    return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
+  }, 0) || 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
@@ -404,25 +412,38 @@ function PortfolioPanel({ data, t, onTrade }) {
         </div>
         <div className="divide-y divide-white/5">
           {data?.assets && data.assets.length > 0 ? (
-            data.assets.map(a => (
-              <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
-                <b className="text-sm">{a.symbol}</b>
-                <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
-                <span className="text-right text-sm font-bold text-white">{money(a.valueUsd)}</span>
-                <div className="text-right">
-                  {Number(a.quantity) > 0 ? (
-                    <button
-                      onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
-                      className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
-                    >
-                      {t('trade.sell')}
-                    </button>
-                  ) : (
-                    <span className="text-xs text-slate-600">—</span>
-                  )}
+            data.assets.map(a => {
+              const livePrice = Number(market?.prices?.[a.symbol] || 0);
+              const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
+              return (
+                <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
+                  <b className="text-sm">{a.symbol}</b>
+                  <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
+                  <div className="text-right flex items-center justify-end gap-2.5">
+                    <span className="text-sm font-bold text-white">{money(liveValue)}</span>
+                    {changes?.[a.symbol] !== undefined && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        changes[a.symbol] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}>
+                        {changes[a.symbol] >= 0 ? '+' : ''}{changes[a.symbol].toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {Number(a.quantity) > 0 ? (
+                      <button
+                        onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
+                        className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
+                      >
+                        {t('trade.sell')}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-600">—</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
           )}
@@ -509,10 +530,10 @@ function HistoryPanel({ trades, t, dateLocale }) {
   );
 }
 
-function AssetAllocationChart({ portfolio, t }) {
+function AssetAllocationChart({ portfolio, market, t }) {
   const [hoveredAsset, setHoveredAsset] = useState(null);
 
-  if (!portfolio || !portfolio.totalValueUsd || portfolio.totalValueUsd <= 0) {
+  if (!portfolio) {
     return null;
   }
 
@@ -521,12 +542,16 @@ function AssetAllocationChart({ portfolio, t }) {
 
   const items = [
     { symbol: 'USD', value: cash, color: '#10b981', bgClass: 'bg-emerald-500' },
-    ...assets.map((a, idx) => ({
-      symbol: a.symbol,
-      value: Number(a.valueUsd || 0),
-      color: ['#fbbf24', '#6366f1', '#d946ef'][idx % 3] || '#fbbf24',
-      bgClass: ['bg-amber-400', 'bg-indigo-500', 'bg-fuchsia-500'][idx % 3] || 'bg-amber-400'
-    }))
+    ...assets.map((a, idx) => {
+      const livePrice = Number(market?.prices?.[a.symbol] || 0);
+      const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
+      return {
+        symbol: a.symbol,
+        value: liveValue,
+        color: ['#fbbf24', '#6366f1', '#d946ef'][idx % 3] || '#fbbf24',
+        bgClass: ['bg-amber-400', 'bg-indigo-500', 'bg-fuchsia-500'][idx % 3] || 'bg-amber-400'
+      };
+    })
   ].filter(item => item.value > 0);
 
   const sum = items.reduce((s, i) => s + i.value, 0);
