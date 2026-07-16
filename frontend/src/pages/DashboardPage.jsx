@@ -317,6 +317,7 @@ export default function DashboardPage({ onLogout }) {
           symbol={modal.symbol}
           side={modal.side}
           isSellOnly={modal.isSellOnly}
+          changePercent={changes?.[modal.symbol]}
           livePrice={market?.prices?.[modal.symbol]}
           priceStatus={symbolStatuses?.[modal.symbol]}
           portfolio={portfolio}

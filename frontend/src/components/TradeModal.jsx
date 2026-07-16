@@ -5,7 +5,7 @@ import { normalizeQuantityInput } from '../features/trades/quantityInput'
 import { validateTrade } from '../features/trades/tradeValidation'
 import { money } from '../utils/format'
 
-export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOnly = false, livePrice, priceStatus, portfolio, onClose, onComplete }) {
+export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOnly = false, changePercent, livePrice, priceStatus, portfolio, onClose, onComplete }) {
   const { t } = useTranslation()
   const [side, setSide] = useState(initialSide)
   const [quantity, setQuantity] = useState('')
@@ -198,9 +198,25 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={event => event.target === event.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label={t('trade.symbolTransaction', { symbol })} className="card w-full max-w-md rounded-3xl p-7 animate-in">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="label">{t('trade.newOrder')}</p>
-            <h2 className="mt-1 text-3xl font-black">{t('trade.symbolTransaction', { symbol })}</h2>
+          <div className="flex items-center gap-3.5">
+            <span className={`grid h-11 w-11 place-items-center rounded-full font-black text-sm ${
+              symbol === 'BTC' ? 'bg-amber-300 text-amber-950' :
+              symbol === 'ETH' ? 'bg-indigo-300 text-indigo-950' :
+              'bg-fuchsia-300 text-fuchsia-950'
+            }`}>{symbol[0]}</span>
+            <div>
+              <p className="label text-[10px] tracking-wider">{t('trade.newOrder')}</p>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <h2 className="text-xl font-black text-white">{symbol} / USD</h2>
+                {changePercent !== undefined && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    changePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                  }`}>
+                    {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
           <button type="button" aria-label="Close" onClick={onClose} className="text-2xl text-slate-400 hover:text-white transition-colors">×</button>
         </div>
