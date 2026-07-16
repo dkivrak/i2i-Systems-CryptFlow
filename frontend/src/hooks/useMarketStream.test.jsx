@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import {
   MARKET_RECONNECT_DELAY_MS,
   MARKET_STALE_AFTER_MS,
+  MARKET_SYMBOLS,
   useMarketStream,
 } from './useMarketStream'
 
@@ -60,7 +61,7 @@ describe('useMarketStream', () => {
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
     MockWebSocket.instances = []
     api.mockResolvedValue({
-      prices: { BTC: 100, ETH: 20, SOL: 5 },
+      prices: { BTC: 100, ETH: 20, SOL: 5, BNB: 600, ADA: 0.5, XRP: 0.6, DOGE: 0.15, DOT: 6, AVAX: 25, LINK: 15 },
       updatedAt: '2026-01-01T00:00:00Z',
     })
     vi.stubGlobal('WebSocket', MockWebSocket)
@@ -80,11 +81,11 @@ describe('useMarketStream', () => {
     act(() => MockWebSocket.instances[0].open())
 
     expect(result.current.status).toBe('connecting')
-    expect(result.current.symbolStatuses).toEqual({ BTC: 'connecting', ETH: 'connecting', SOL: 'connecting' })
+    expect(result.current.symbolStatuses).toEqual(Object.fromEntries(MARKET_SYMBOLS.map(s => [s, 'connecting'])))
 
     act(() => vi.advanceTimersByTime(MARKET_STALE_AFTER_MS))
     expect(result.current.status).toBe('stale')
-    expect(result.current.symbolStatuses).toEqual({ BTC: 'stale', ETH: 'stale', SOL: 'stale' })
+    expect(result.current.symbolStatuses).toEqual(Object.fromEntries(MARKET_SYMBOLS.map(s => [s, 'stale'])))
   })
 
   it('becomes live only after a valid current-generation price message', async () => {
@@ -93,7 +94,7 @@ describe('useMarketStream', () => {
 
     act(() => {
       socket.open()
-      socket.message({ s: 'DOGE', p: '1' })
+      socket.message({ s: 'XYZ', p: '1' })
     })
     expect(result.current.status).toBe('connecting')
 
@@ -110,17 +111,16 @@ describe('useMarketStream', () => {
 
     act(() => {
       socket.open()
-      socket.message({ s: 'BTC', p: '100' })
-      socket.message({ s: 'ETH', p: '20' })
-      socket.message({ s: 'SOL', p: '5' })
+      MARKET_SYMBOLS.forEach(s => socket.message({ s, p: '10' }))
       vi.advanceTimersByTime(MARKET_STALE_AFTER_MS - 1_000)
-      socket.message({ s: 'ETH', p: '21' })
-      socket.message({ s: 'SOL', p: '6' })
+      MARKET_SYMBOLS.filter(s => s !== 'BTC').forEach(s => socket.message({ s, p: '11' }))
       vi.advanceTimersByTime(2_000)
     })
 
     expect(result.current.status).toBe('stale')
-    expect(result.current.symbolStatuses).toEqual({ BTC: 'stale', ETH: 'live', SOL: 'live' })
+    expect(result.current.symbolStatuses.BTC).toBe('stale')
+    expect(result.current.symbolStatuses.ETH).toBe('live')
+    expect(result.current.symbolStatuses.SOL).toBe('live')
 
     act(() => socket.message({ s: 'BTC', p: '102' }))
     expect(result.current.status).toBe('live')

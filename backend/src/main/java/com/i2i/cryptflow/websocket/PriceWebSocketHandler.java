@@ -35,8 +35,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @Component
 public class PriceWebSocketHandler extends TextWebSocketHandler {
   private static final Logger log = LoggerFactory.getLogger(PriceWebSocketHandler.class);
-  private static final List<AssetSymbol> STREAM_SYMBOLS =
-      List.of(AssetSymbol.BTC, AssetSymbol.ETH, AssetSymbol.SOL);
+  private static final List<AssetSymbol> STREAM_SYMBOLS = List.of(AssetSymbol.values());
   private static final int SEND_TIME_LIMIT_MS = 10_000;
   private static final int BUFFER_SIZE_LIMIT_BYTES = 512 * 1024;
   private static final long CONNECT_TIMEOUT_MS = 10_000;
@@ -573,11 +572,8 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   }
 
   private static URI binanceUri(AssetSymbol symbol) {
-    return switch (symbol) {
-      case BTC -> URI.create("wss://stream.binance.com/ws/btcusdt@trade");
-      case ETH -> URI.create("wss://stream.binance.com/ws/ethusdt@trade");
-      case SOL -> URI.create("wss://stream.binance.com/ws/solusdt@trade");
-    };
+    String lower = symbol.name().toLowerCase();
+    return URI.create("wss://stream.binance.com/ws/" + lower + "usdt@trade");
   }
 
   private static ScheduledExecutorService newReconnectExecutor() {

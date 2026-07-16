@@ -7,7 +7,7 @@ import ProfileModal from '../components/ProfileModal';
 import { money, coin } from '../utils/format';
 import { changeAppLanguage } from '../utils/language';
 
-const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL'];
+const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK'];
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export default function DashboardPage({ onLogout }) {

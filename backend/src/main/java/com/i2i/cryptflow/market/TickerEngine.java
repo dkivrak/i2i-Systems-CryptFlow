@@ -57,7 +57,7 @@ public class TickerEngine {
       if (latest.isPresent()) {
         prices.put(symbol, latest.get().getPriceUsd());
       } else {
-        prices.put(symbol, initial.get(symbol));
+        prices.put(symbol, getInitialPrice(symbol));
         usedInitialPrice = true;
       }
     }
@@ -84,5 +84,21 @@ public class TickerEngine {
       prices.put(symbol, current.prices().get(symbol.name()));
     }
     writer.write(prices, Instant.now());
+  }
+
+  private BigDecimal getInitialPrice(AssetSymbol symbol) {
+    if (initial.containsKey(symbol)) {
+      return initial.get(symbol);
+    }
+    return switch (symbol) {
+      case BNB -> new BigDecimal("600.00");
+      case ADA -> new BigDecimal("0.50");
+      case XRP -> new BigDecimal("0.60");
+      case DOGE -> new BigDecimal("0.15");
+      case DOT -> new BigDecimal("6.00");
+      case AVAX -> new BigDecimal("25.00");
+      case LINK -> new BigDecimal("15.00");
+      default -> new BigDecimal("1.00");
+    };
   }
 }

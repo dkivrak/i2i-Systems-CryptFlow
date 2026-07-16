@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, WS_URL } from '../api/client'
 
-export const MARKET_SYMBOLS = ['BTC', 'ETH', 'SOL']
+export const MARKET_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK']
 export const MARKET_STALE_AFTER_MS = 15_000
 export const MARKET_WATCHDOG_INTERVAL_MS = 1_000
 export const MARKET_RECONNECT_DELAY_MS = 5_000
