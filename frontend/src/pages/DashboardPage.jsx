@@ -277,6 +277,90 @@ export default function DashboardPage({ onLogout }) {
             <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
             <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.totalValueUsd)}</p>
           </div>
+
+          {portfolio?.totalValueUsd > 0 && (
+            <div className="card rounded-2xl p-5 flex items-center justify-between col-span-2">
+              <div className="flex items-center gap-6">
+                {/* SVG Doughnut Chart */}
+                <div className="relative h-14 w-14 flex-shrink-0">
+                  <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90">
+                    {(() => {
+                      const cash = Number(portfolio.usdBalance || 0);
+                      const assets = portfolio.assets || [];
+
+                      const items = [
+                        { symbol: 'USD', value: cash, color: '#10b981' },
+                        ...assets.map((a, idx) => ({
+                          symbol: a.symbol,
+                          value: Number(a.valueUsd || 0),
+                          color: ['#fbbf24', '#6366f1', '#d946ef'][idx]
+                        }))
+                      ].filter(item => item.value > 0);
+
+                      if (items.length === 0) {
+                        return <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="4" />;
+                      }
+
+                      const sum = items.reduce((s, i) => s + i.value, 0);
+                      let cumulativePercent = 0;
+
+                      return items.map((item, index) => {
+                        const percent = (item.value / sum) * 100;
+                        const dashArray = `${percent} ${100 - percent}`;
+                        const dashOffset = -cumulativePercent;
+                        cumulativePercent += percent;
+                        return (
+                          <circle
+                            key={index}
+                            cx="18"
+                            cy="18"
+                            r="15.9155"
+                            fill="transparent"
+                            stroke={item.color}
+                            strokeWidth="4"
+                            strokeDasharray={dashArray}
+                            strokeDashoffset={dashOffset}
+                            className="transition-all duration-300"
+                          />
+                        );
+                      });
+                    })()}
+                  </svg>
+                </div>
+
+                {/* Legend list */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 items-center">
+                  {(() => {
+                    const total = Number(portfolio.totalValueUsd);
+                    const cash = Number(portfolio.usdBalance || 0);
+                    const assets = portfolio.assets || [];
+                    const items = [
+                      { symbol: 'USD', value: cash, color: 'bg-emerald-500' },
+                      ...assets.map((a, idx) => ({
+                        symbol: a.symbol,
+                        value: Number(a.valueUsd || 0),
+                        color: ['bg-amber-400', 'bg-indigo-500', 'bg-fuchsia-500'][idx]
+                      }))
+                    ];
+                    return items.map((item, index) => {
+                      const percent = total > 0 ? (item.value / total) * 100 : 0;
+                      if (percent <= 0) return null;
+                      return (
+                        <div key={index} className="flex items-center gap-2 text-xs">
+                          <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
+                          <span className="text-slate-400">{item.symbol}</span>
+                          <span className="font-bold text-white">{percent.toFixed(1)}%</span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+              <p className="label hidden sm:block text-[9px] tracking-wider text-slate-500 mr-2">
+                {t('dashboard.assetAllocation')}
+              </p>
+            </div>
+          )}
         </section>
 
         {(error || marketError) && (

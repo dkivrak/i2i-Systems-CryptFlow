@@ -12,6 +12,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
   const [busy, setBusy] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [result, setResult] = useState(null)
+  const [showApproveStep, setShowApproveStep] = useState(false)
 
   const contextKey = `${symbol}|${side}|${quantity}|${livePrice}|${priceStatus}`
   const latestContextRef = useRef(contextKey)
@@ -46,15 +47,18 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
     setSide(nextSide)
   }
 
-  async function submit(event) {
+  function handleFormSubmit(event) {
     event.preventDefault()
     setRequestError('')
-
     if (validationError) {
       setRequestError(t(validationError))
       return
     }
+    setShowApproveStep(true)
+  }
 
+  async function executeTrade() {
+    setRequestError('')
     const submittedContext = contextKey
     setBusy(true)
     try {
@@ -65,6 +69,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
       if (latestContextRef.current === submittedContext) {
         setRequestError(requestErrorValue.message)
       }
+      setShowApproveStep(false)
     } finally {
       setBusy(false)
     }
@@ -124,6 +129,71 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
     )
   }
 
+  if (showApproveStep && !result) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={event => event.target === event.currentTarget && onClose()}>
+        <div role="dialog" aria-modal="true" className="card w-full max-w-md rounded-3xl p-7 animate-in space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <span className="inline-grid h-12 w-12 place-items-center rounded-full bg-amber-500/10 text-amber-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </span>
+            <h2 className="text-2xl font-black text-white">{t('trade.confirmTitle')}</h2>
+            <p className="text-xs text-slate-400">{t('trade.confirmDesc')}</p>
+          </div>
+
+          {/* Details Table */}
+          <div className="rounded-2xl bg-[#081522] p-5 space-y-3.5 border border-white/5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptType')}</span>
+              <span className={`font-bold px-2 py-0.5 rounded text-xs ${side === 'BUY' ? 'bg-[#1fc8a4]/10 text-[#1fc8a4]' : 'bg-rose-500/10 text-rose-400'}`}>
+                {side === 'BUY' ? t('trade.buy') : t('trade.sell')}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptAsset')}</span>
+              <span className="font-bold text-white">{symbol}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptQuantity')}</span>
+              <span className="font-bold text-white">{quantity} {symbol}</span>
+            </div>
+            <div className="flex justify-between border-t border-white/10 pt-3">
+              <span className="text-slate-400 font-bold">{t('trade.receiptTotal')}</span>
+              <span className="font-black text-[#1fc8a4]">{money(estimatedTotal)}</span>
+            </div>
+          </div>
+
+          {displayedError && <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{displayedError}</p>}
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={executeTrade}
+              disabled={busy}
+              className="btn btn-primary flex-1 py-3"
+            >
+              {busy ? t('trade.processingOrder') : t('trade.approveOrder')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowApproveStep(false)}
+              disabled={busy}
+              className="btn bg-white/10 hover:bg-white/20 text-white flex-1 py-3 font-bold transition"
+            >
+              {t('trade.backToEdit')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={event => event.target === event.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label={t('trade.symbolTransaction', { symbol })} className="card w-full max-w-md rounded-3xl p-7 animate-in">
@@ -159,7 +229,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
           </div>
         )}
 
-        <form onSubmit={submit} className="mt-6">
+        <form onSubmit={handleFormSubmit} className="mt-6">
           <label htmlFor="trade-quantity" className="text-sm text-slate-300">{t('trade.coinQuantity')}</label>
           <div className="mt-2 text-sm text-slate-400">
             {hasFreshPrice ? `${t('trade.livePrice')}: ${money(numericPrice)}` : t(unavailablePriceMessage)}

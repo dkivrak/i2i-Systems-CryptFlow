@@ -128,7 +128,11 @@ const resources = {
         receiptQuantity: 'Quantity',
         receiptPrice: 'Unit Price',
         receiptTotal: 'Total Amount',
-        closeReceipt: 'Done'
+        closeReceipt: 'Done',
+        confirmTitle: 'Order Confirmation',
+        confirmDesc: 'Please confirm the transaction details below.',
+        approveOrder: 'Yes, Approve',
+        backToEdit: 'Go Back'
       },
 
       // --- Profile Modal ---
@@ -280,7 +284,11 @@ const resources = {
         receiptQuantity: 'Miktar',
         receiptPrice: 'Birim Fiyat',
         receiptTotal: 'Toplam Tutar',
-        closeReceipt: 'Tamam'
+        closeReceipt: 'Tamam',
+        confirmTitle: 'İşlem Onayı',
+        confirmDesc: 'Lütfen aşağıdaki işlem detaylarını onaylayın.',
+        approveOrder: 'Evet, Onayla',
+        backToEdit: 'Geri Dön'
       },
 
       // --- Profile Modal ---

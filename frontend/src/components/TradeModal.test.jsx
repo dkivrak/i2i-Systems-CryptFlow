@@ -24,6 +24,10 @@ vi.mock('react-i18next', () => ({
         'trade.executeOrder': 'Emri gerçekleştir',
         'trade.available': 'Mevcut:',
         'trade.owned': 'Sahip olunan:',
+        'trade.confirmTitle': 'İşlem Onayı',
+        'trade.confirmDesc': 'Lütfen aşağıdaki işlem detaylarını onaylayın.',
+        'trade.approveOrder': 'Evet, Onayla',
+        'trade.backToEdit': 'Geri Dön',
       }
       return translations[key] || key
     }
@@ -113,6 +117,7 @@ describe('TradeModal', () => {
 
     fireEvent.change(input, { target: { value: '0.01' } })
     fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, Onayla' }))
 
     expect(screen.getByRole('button', { name: 'Emir işleniyor…' }).disabled).toBe(true)
 
@@ -124,7 +129,10 @@ describe('TradeModal', () => {
     expect(screen.getByRole('alert').textContent).toBe('Yetersiz USD bakiyesi')
     expect(submitButton.disabled).toBe(false)
 
-    fireEvent.change(input, { target: { value: '0.005' } })
+    const newInput = screen.getByLabelText('Coin miktarı')
+    await act(async () => {
+      fireEvent.change(newInput, { target: { value: '0.005' } })
+    })
     expect(screen.queryByText('Yetersiz USD bakiyesi')).toBeNull()
     expect(submitButton.disabled).toBe(false)
   })
