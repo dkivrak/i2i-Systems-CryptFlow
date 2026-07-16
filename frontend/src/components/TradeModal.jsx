@@ -199,11 +199,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
       <div role="dialog" aria-modal="true" aria-label={t('trade.symbolTransaction', { symbol })} className="card w-full max-w-md rounded-3xl p-7 animate-in">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
-            <span className={`grid h-11 w-11 place-items-center rounded-full font-black text-sm ${
-              symbol === 'BTC' ? 'bg-amber-300 text-amber-950' :
-              symbol === 'ETH' ? 'bg-indigo-300 text-indigo-950' :
-              'bg-fuchsia-300 text-fuchsia-950'
-            }`}>{symbol[0]}</span>
+            <CoinLogo symbol={symbol} index={symbol === 'BTC' ? 0 : symbol === 'ETH' ? 1 : 2} />
             <div>
               <p className="label text-[10px] tracking-wider">{t('trade.newOrder')}</p>
               <div className="flex items-baseline gap-2 mt-0.5">
@@ -297,4 +293,35 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
       </div>
     </div>
   )
+}
+
+function CoinLogo({ symbol, index }) {
+  const [imgError, setImgError] = useState(false);
+
+  const colors = [
+    'bg-amber-300 text-amber-950',
+    'bg-indigo-300 text-indigo-950',
+    'bg-fuchsia-300 text-fuchsia-950',
+    'bg-emerald-300 text-emerald-950',
+    'bg-sky-300 text-sky-950',
+    'bg-rose-300 text-rose-950'
+  ];
+  const bgClass = colors[index % colors.length] || 'bg-amber-300 text-amber-950';
+
+  if (imgError) {
+    return (
+      <span className={`grid h-11 w-11 place-items-center rounded-full font-black text-sm ${bgClass}`}>
+        {symbol[0]}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`}
+      alt={symbol}
+      onError={() => setImgError(true)}
+      className="h-11 w-11 rounded-full object-contain"
+    />
+  );
 }

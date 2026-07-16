@@ -336,7 +336,7 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
+        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
@@ -366,11 +366,11 @@ export default function DashboardPage({ onLogout }) {
   );
 }
 
-function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
+function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes }) {
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-3">
-        {SUPPORTED_SYMBOLS.map((s, i) => {
+        {symbols.map((s, i) => {
           const asset = portfolio?.assets?.find(a => a.symbol === s);
           return (
             <button
@@ -379,9 +379,7 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
               className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#1fc8a4]/50"
             >
               <div className="flex items-center justify-between">
-                <span className={`grid h-11 w-11 place-items-center rounded-full font-black ${
-                  ['bg-amber-300 text-amber-950', 'bg-indigo-300 text-indigo-950', 'bg-fuchsia-300 text-fuchsia-950'][i]
-                }`}>{s[0]}</span>
+                <CoinLogo symbol={s} index={i} />
                 <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
               </div>
               <p className="mt-6 label">{s} / USD</p>
@@ -621,7 +619,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
                     className="transition-all duration-300 cursor-pointer"
                     style={{
                       transform: isHovered ? 'scale(1.06)' : 'scale(1)',
-                      transformOrigin: '18px 18px',
+                      transformOrigin: 'center',
                     }}
                     onMouseEnter={() => setHoveredAsset({ symbol: item.symbol, value: item.value, percent, color: item.color, bgClass: item.bgClass })}
                     onMouseLeave={() => setHoveredAsset(null)}
@@ -659,6 +657,37 @@ function AssetAllocationChart({ portfolio, market, t }) {
         {t('dashboard.assetAllocation')}
       </p>
     </div>
+  );
+}
+
+function CoinLogo({ symbol, index }) {
+  const [imgError, setImgError] = useState(false);
+
+  const colors = [
+    'bg-amber-300 text-amber-950',
+    'bg-indigo-300 text-indigo-950',
+    'bg-fuchsia-300 text-fuchsia-950',
+    'bg-emerald-300 text-emerald-950',
+    'bg-sky-300 text-sky-950',
+    'bg-rose-300 text-rose-950'
+  ];
+  const bgClass = colors[index % colors.length] || 'bg-amber-300 text-amber-950';
+
+  if (imgError) {
+    return (
+      <span className={`grid h-11 w-11 place-items-center rounded-full font-black text-sm ${bgClass}`}>
+        {symbol[0]}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`}
+      alt={symbol}
+      onError={() => setImgError(true)}
+      className="h-11 w-11 rounded-full object-contain"
+    />
   );
 }
 
