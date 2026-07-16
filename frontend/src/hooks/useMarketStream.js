@@ -11,6 +11,7 @@ const statusesFor = status => Object.fromEntries(MARKET_SYMBOLS.map(symbol => [s
 export function useMarketStream() {
   const [market, setMarket] = useState(null)
   const [basePrices, setBasePrices] = useState(null)
+  const [dailyOpenPrices, setDailyOpenPrices] = useState(null)
   const [status, setStatus] = useState('connecting')
   const [symbolStatuses, setSymbolStatuses] = useState(() => statusesFor('connecting'))
   const [error, setError] = useState('')
@@ -143,6 +144,27 @@ export function useMarketStream() {
       }
     }
 
+    if (import.meta.env.MODE !== 'test') {
+      fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT"]')
+        .then(res => res.json())
+        .then(data => {
+          if (alive && Array.isArray(data)) {
+            const opens = {}
+            data.forEach(item => {
+              const symbol = item.symbol.replace('USDT', '')
+              const openPrice = Number(item.openPrice || 0)
+              if (openPrice > 0) {
+                opens[symbol] = openPrice
+              }
+            })
+            setDailyOpenPrices(opens)
+          }
+        })
+        .catch(err => {
+          console.warn('Failed to fetch daily open prices from Binance:', err)
+        })
+    }
+
     api('/market/prices')
       .then(value => {
         if (alive) {
@@ -182,9 +204,9 @@ export function useMarketStream() {
   }, [])
 
   const changes = {}
-  if (basePrices && market?.prices) {
+  if (market?.prices) {
     for (const symbol of MARKET_SYMBOLS) {
-      const base = Number(basePrices[symbol])
+      const base = Number(dailyOpenPrices?.[symbol] || basePrices?.[symbol] || 0)
       const current = Number(market.prices[symbol])
       if (base > 0 && current > 0) {
         changes[symbol] = ((current - base) / base) * 100
