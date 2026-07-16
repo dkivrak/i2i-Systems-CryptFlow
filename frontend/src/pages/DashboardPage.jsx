@@ -22,8 +22,59 @@ export default function DashboardPage({ onLogout }) {
   const [showProfile, setShowProfile] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
+  const [dailySummary, setDailySummary] = useState('');
 
   const currentLang = i18n.language;
+
+  useEffect(() => {
+    const cachedSummary = localStorage.getItem('cryptflow_daily_summary');
+    const cachedTime = localStorage.getItem('cryptflow_daily_summary_time');
+    const lastReadTime = localStorage.getItem('cryptflow_daily_summary_read_time');
+
+    const fetchDailySummary = async () => {
+      try {
+        const prompt = "Lütfen portföyümün genel durumunu ve piyasadaki son trendleri (BTC, ETH, SOL) analiz eden, en fazla 2-3 cümlelik çok kısa, Türkçe, bilgilendirici ve heyecan verici bir günlük özet yaz. (Yanıtın sadece bu özet olsun, yasal uyarı veya disclaimer ekleme).";
+        const response = await api('/chat/query', {
+          method: 'POST',
+          body: JSON.stringify({ message: prompt })
+        });
+        if (response?.answer) {
+          const cleanAnswer = response.answer.replace(/Yasal Uyarı[\s\S]*$/gi, '').trim();
+          localStorage.setItem('cryptflow_daily_summary', cleanAnswer);
+          localStorage.setItem('cryptflow_daily_summary_time', Date.now().toString());
+          setDailySummary(cleanAnswer);
+          setHasUnreadNotification(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch daily summary from AI", err);
+      }
+    };
+
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    if (cachedSummary && cachedTime && (now - Number(cachedTime) < oneDayMs)) {
+      setDailySummary(cachedSummary);
+      if (!lastReadTime || Number(lastReadTime) < Number(cachedTime)) {
+        setHasUnreadNotification(true);
+      }
+    } else {
+      fetchDailySummary();
+    }
+  }, []);
+
+  const openNotifications = () => {
+    setShowNotifications(prev => {
+      const next = !prev;
+      if (next) {
+        setHasUnreadNotification(false);
+        localStorage.setItem('cryptflow_daily_summary_read_time', Date.now().toString());
+      }
+      return next;
+    });
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -119,6 +170,58 @@ export default function DashboardPage({ onLogout }) {
               <span className={`h-2 w-2 rounded-full ${streamView.dot}`} />
               <span className="hidden sm:inline text-slate-400">{streamView.label}</span>
             </div>
+            <div className="relative">
+              <button
+                onClick={openNotifications}
+                className="text-slate-400 hover:text-[#1fc8a4] transition-colors relative flex items-center"
+                aria-label="Notifications"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {hasUnreadNotification && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                    <h3 className="text-sm font-bold text-white">{t('dashboard.notifications')}</h3>
+                    <button onClick={() => setShowNotifications(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
+                  </div>
+                  {dailySummary ? (
+                    <div className="space-y-3">
+                      <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
+                        <div className="flex gap-2">
+                          <span className="text-[#1fc8a4] text-xs">✦</span>
+                          <div>
+                            <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle')}</p>
+                            <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setTab('portfolio');
+                            setShowNotifications(false);
+                          }}
+                          className="mt-3 w-full rounded-lg bg-[#1fc8a4]/10 py-1.5 text-center text-xs font-bold text-[#1fc8a4] hover:bg-[#1fc8a4]/20 transition"
+                        >
+                          {t('dashboard.goToPortfolio')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 py-4">{t('dashboard.noNotifications')}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowProfile(true)}
               className="text-slate-400 hover:text-[#1fc8a4] transition-colors"

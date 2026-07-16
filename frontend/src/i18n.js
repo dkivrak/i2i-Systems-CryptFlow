@@ -69,7 +69,12 @@ const resources = {
         colPrice: 'Price',
         colTotal: 'Total',
         colTime: 'Time',
-        noTransactions: 'No transactions yet.'
+        noTransactions: 'No transactions yet.',
+        notifications: 'Notifications',
+        close: 'Close',
+        dailySummaryTitle: 'Daily AI Summary',
+        goToPortfolio: 'Go to Portfolio',
+        noNotifications: 'No new notifications.'
       },
 
       // --- Chat Widget ---
@@ -200,7 +205,12 @@ const resources = {
         colPrice: 'Fiyat',
         colTotal: 'Toplam',
         colTime: 'Zaman',
-        noTransactions: 'Henüz işlem yok.'
+        noTransactions: 'Henüz işlem yok.',
+        notifications: 'Bildirimler',
+        close: 'Kapat',
+        dailySummaryTitle: 'Günlük Yapay Zeka Özeti',
+        goToPortfolio: 'Portföye Git',
+        noNotifications: 'Yeni bildirim yok.'
       },
 
       // --- Chat Widget ---
