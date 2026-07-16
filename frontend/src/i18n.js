@@ -143,7 +143,14 @@ const resources = {
         updatePassword: 'Update Password',
         atLeastChars: 'At least 8 characters',
         confirmYourPassword: 'Confirm your new password',
-        unknown: 'Unknown'
+        unknown: 'Unknown',
+        dangerZone: 'DANGER ZONE',
+        deleteAccountDesc: 'Permanently deleting your account will remove all transaction history and wallet balances. This action is irreversible.',
+        areYouSure: 'Are you sure? This cannot be undone.',
+        deleting: 'Deleting...',
+        yesDelete: 'Yes, Delete My Account',
+        cancel: 'Cancel',
+        deleteAccount: 'Permanently Delete Account'
       }
     }
   },
@@ -279,7 +286,14 @@ const resources = {
         updatePassword: 'Şifreyi Güncelle',
         atLeastChars: 'En az 8 karakter',
         confirmYourPassword: 'Yeni şifrenizi onaylayın',
-        unknown: 'Bilinmiyor'
+        unknown: 'Bilinmiyor',
+        dangerZone: 'TEHLİKELİ BÖLGE',
+        deleteAccountDesc: 'Hesabınızı kalıcı olarak sildiğinizde, tüm işlem geçmişiniz ve cüzdan bakiyeniz geri döndürülemeyecek şekilde silinecektir.',
+        areYouSure: 'Emin misiniz? Bu işlem geri alınamaz.',
+        deleting: 'Siliniyor...',
+        yesDelete: 'Evet, Hesabımı Sil',
+        cancel: 'Vazgeç',
+        deleteAccount: 'Hesabı Kalıcı Olarak Sil'
       }
     }
   }

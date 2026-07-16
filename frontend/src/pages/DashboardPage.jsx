@@ -325,6 +325,7 @@ export default function DashboardPage({ onLogout }) {
         <ProfileModal
           me={me}
           onClose={() => setShowProfile(false)}
+          onLogout={onLogout}
         />
       )}
     </div>

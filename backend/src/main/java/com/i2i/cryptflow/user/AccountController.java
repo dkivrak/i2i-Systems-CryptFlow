@@ -2,6 +2,8 @@ package com.i2i.cryptflow.user;
 
 import com.i2i.cryptflow.shared.error.ApiException;
 import com.i2i.cryptflow.wallet.WalletRepository;
+import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
+import com.i2i.cryptflow.trade.TradeTransactionRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -20,11 +22,21 @@ public class AccountController {
     private final UserRepository users;
     private final WalletRepository wallets;
     private final PasswordEncoder passwordEncoder;
+    private final PortfolioAssetRepository portfolioAssets;
+    private final TradeTransactionRepository tradeTransactions;
 
-    public AccountController(UserRepository users, WalletRepository wallets, PasswordEncoder passwordEncoder) {
+    public AccountController(
+        UserRepository users,
+        WalletRepository wallets,
+        PasswordEncoder passwordEncoder,
+        PortfolioAssetRepository portfolioAssets,
+        TradeTransactionRepository tradeTransactions
+    ) {
         this.users = users;
         this.wallets = wallets;
         this.passwordEncoder = passwordEncoder;
+        this.portfolioAssets = portfolioAssets;
+        this.tradeTransactions = tradeTransactions;
     }
 
     @GetMapping("/me")
@@ -50,6 +62,26 @@ public class AccountController {
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         users.save(user);
+    }
+
+    @DeleteMapping("/me")
+    @Transactional
+    public void deleteAccount(@AuthenticationPrincipal UUID userId) {
+        var user = users.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found."));
+        var wallet = wallets.findByUserId(userId).orElseThrow();
+
+        // 1. Delete trade transactions
+        tradeTransactions.deleteByUserId(userId);
+
+        // 2. Delete portfolio assets
+        portfolioAssets.deleteByWalletId(wallet.getId());
+
+        // 3. Delete wallet
+        wallets.delete(wallet);
+
+        // 4. Delete user
+        users.delete(user);
     }
 
     public record MeResponse(UUID id, String email, BigDecimal usdBalance, java.time.Instant createdAt) {}
