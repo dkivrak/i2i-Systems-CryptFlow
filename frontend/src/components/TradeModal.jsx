@@ -11,6 +11,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
   const [quantity, setQuantity] = useState('')
   const [busy, setBusy] = useState(false)
   const [requestError, setRequestError] = useState('')
+  const [result, setResult] = useState(null)
 
   const contextKey = `${symbol}|${side}|${quantity}|${livePrice}|${priceStatus}`
   const latestContextRef = useRef(contextKey)
@@ -57,9 +58,9 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
     const submittedContext = contextKey
     setBusy(true)
     try {
-      await api('/trades', { method: 'POST', body: JSON.stringify({ symbol, side, quantity }) })
+      const res = await api('/trades', { method: 'POST', body: JSON.stringify({ symbol, side, quantity }) })
+      setResult(res)
       await onComplete()
-      onClose()
     } catch (requestErrorValue) {
       if (latestContextRef.current === submittedContext) {
         setRequestError(requestErrorValue.message)
@@ -67,6 +68,60 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
     } finally {
       setBusy(false)
     }
+  }
+
+  if (result) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={event => event.target === event.currentTarget && onClose()}>
+        <div role="dialog" aria-modal="true" className="card w-full max-w-md rounded-3xl p-7 animate-in space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <span className="inline-grid h-12 w-12 place-items-center rounded-full bg-emerald-500/10 text-emerald-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <h2 className="text-2xl font-black text-white">{t('trade.successTitle')}</h2>
+            <p className="text-xs text-slate-400">{t('trade.receiptDesc')}</p>
+          </div>
+
+          {/* Receipt Details */}
+          <div className="rounded-2xl bg-[#081522] p-5 space-y-3.5 border border-white/5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptType')}</span>
+              <span className={`font-bold px-2 py-0.5 rounded text-xs ${result.side === 'BUY' ? 'bg-[#1fc8a4]/10 text-[#1fc8a4]' : 'bg-rose-500/10 text-rose-400'}`}>
+                {result.side === 'BUY' ? t('trade.buy') : t('trade.sell')}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptAsset')}</span>
+              <span className="font-bold text-white">{result.symbol}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptQuantity')}</span>
+              <span className="font-bold text-white">{result.quantity} {result.symbol}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">{t('trade.receiptPrice')}</span>
+              <span className="font-bold text-white">{money(result.unitPriceUsd)}</span>
+            </div>
+            <div className="flex justify-between border-t border-white/10 pt-3">
+              <span className="text-slate-400 font-bold">{t('trade.receiptTotal')}</span>
+              <span className="font-black text-[#1fc8a4]">{money(result.totalUsd)}</span>
+            </div>
+          </div>
+
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-primary w-full py-3"
+          >
+            {t('trade.closeReceipt')}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

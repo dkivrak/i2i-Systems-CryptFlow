@@ -120,7 +120,15 @@ const resources = {
         invalidAmount: 'Quantity must be positive with at most 8 decimal places.',
         livePrice: 'Live Price',
         processingOrder: 'Processing order...',
-        executeOrder: 'Execute Order'
+        executeOrder: 'Execute Order',
+        successTitle: 'Transaction Successful!',
+        receiptDesc: 'Your transaction has been processed securely.',
+        receiptType: 'Transaction Type',
+        receiptAsset: 'Asset',
+        receiptQuantity: 'Quantity',
+        receiptPrice: 'Unit Price',
+        receiptTotal: 'Total Amount',
+        closeReceipt: 'Done'
       },
 
       // --- Profile Modal ---
@@ -264,7 +272,15 @@ const resources = {
         invalidAmount: 'Miktar en fazla 8 ondalık basamaklı pozitif bir sayı olmalıdır.',
         livePrice: 'Canlı Fiyat',
         processingOrder: 'Emir işleniyor...',
-        executeOrder: 'Emri Gerçekleştir'
+        executeOrder: 'Emri Gerçekleştir',
+        successTitle: 'İşlem Başarılı!',
+        receiptDesc: 'İşleminiz güvenli bir şekilde gerçekleştirildi.',
+        receiptType: 'İşlem Tipi',
+        receiptAsset: 'Varlık',
+        receiptQuantity: 'Miktar',
+        receiptPrice: 'Birim Fiyat',
+        receiptTotal: 'Toplam Tutar',
+        closeReceipt: 'Tamam'
       },
 
       // --- Profile Modal ---
