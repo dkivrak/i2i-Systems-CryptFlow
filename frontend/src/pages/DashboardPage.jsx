@@ -17,7 +17,13 @@ export default function DashboardPage({ onLogout }) {
   const [me, setMe] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
   const [trades, setTrades] = useState([]);
-  const [tab, setTab] = useState('market');
+  const [tab, setTab] = useState(() => {
+    try {
+      return sessionStorage.getItem('cryptflow_active_tab') || 'market';
+    } catch {
+      return 'market';
+    }
+  });
   const [modal, setModal] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [error, setError] = useState('');
@@ -69,6 +75,14 @@ export default function DashboardPage({ onLogout }) {
       fetchDailySummary();
     }
   }, [currentLang]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('cryptflow_active_tab', tab);
+    } catch (err) {
+      console.error("Failed to save active tab state to sessionStorage", err);
+    }
+  }, [tab]);
 
   const openNotifications = () => {
     setShowNotifications(prev => {
