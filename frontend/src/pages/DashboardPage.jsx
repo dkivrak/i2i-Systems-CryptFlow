@@ -12,7 +12,7 @@ const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
-  const { market, status, symbolStatuses, error: marketError } = useMarketStream();
+  const { market, status, symbolStatuses, error: marketError, changes } = useMarketStream();
 
   const [me, setMe] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
@@ -183,7 +183,7 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} />}
+        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
@@ -209,7 +209,7 @@ export default function DashboardPage({ onLogout }) {
   );
 }
 
-function MarketPanel({ market, portfolio, onTrade, t, dateLocale }) {
+function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -228,7 +228,16 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale }) {
                 <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
               </div>
               <p className="mt-6 label">{s} / USD</p>
-              <p className="mt-1 text-3xl font-black">{money(market?.prices?.[s])}</p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <p className="text-3xl font-black">{money(market?.prices?.[s])}</p>
+                {changes?.[s] !== undefined && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    changes[s] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                  }`}>
+                    {changes[s] >= 0 ? '+' : ''}{changes[s].toFixed(2)}%
+                  </span>
+                )}
+              </div>
               <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
                 {t('dashboard.holding')}{' '}
                 <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
