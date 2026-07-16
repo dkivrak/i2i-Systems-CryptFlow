@@ -31,19 +31,24 @@ export default function DashboardPage({ onLogout }) {
   useEffect(() => {
     const cachedSummary = localStorage.getItem('cryptflow_daily_summary');
     const cachedTime = localStorage.getItem('cryptflow_daily_summary_time');
+    const cachedLang = localStorage.getItem('cryptflow_daily_summary_lang');
     const lastReadTime = localStorage.getItem('cryptflow_daily_summary_read_time');
 
     const fetchDailySummary = async () => {
       try {
-        const prompt = "Lütfen portföyümün genel durumunu ve piyasadaki son trendleri (BTC, ETH, SOL) analiz eden, en fazla 2-3 cümlelik çok kısa, Türkçe, bilgilendirici ve heyecan verici bir günlük özet yaz. (Yanıtın sadece bu özet olsun, yasal uyarı veya disclaimer ekleme).";
+        const prompt = currentLang === 'tr'
+          ? "Lütfen portföyümün genel durumunu ve piyasadaki son trendleri (BTC, ETH, SOL) analiz eden, en fazla 2-3 cümlelik çok kısa, Türkçe, bilgilendirici ve heyecan verici bir günlük özet yaz. (Yanıtın sadece bu özet olsun, yasal uyarı veya disclaimer ekleme)."
+          : "Please write a very short daily summary and advice analyzing the general status of my portfolio and the recent trends in the market (BTC, ETH, SOL), in at most 2-3 sentences, in English, informative and exciting. (Your response must only contain this summary, do not add legal warnings or disclaimers).";
+
         const response = await api('/chat/query', {
           method: 'POST',
           body: JSON.stringify({ message: prompt })
         });
         if (response?.answer) {
-          const cleanAnswer = response.answer.replace(/Yasal Uyarı[\s\S]*$/gi, '').trim();
+          const cleanAnswer = response.answer.replace(/Yasal Uyarı|Disclaimer[\s\S]*$/gi, '').trim();
           localStorage.setItem('cryptflow_daily_summary', cleanAnswer);
           localStorage.setItem('cryptflow_daily_summary_time', Date.now().toString());
+          localStorage.setItem('cryptflow_daily_summary_lang', currentLang);
           setDailySummary(cleanAnswer);
           setHasUnreadNotification(true);
         }
@@ -55,7 +60,7 @@ export default function DashboardPage({ onLogout }) {
     const oneDayMs = 24 * 60 * 60 * 1000;
     const now = Date.now();
 
-    if (cachedSummary && cachedTime && (now - Number(cachedTime) < oneDayMs)) {
+    if (cachedSummary && cachedTime && cachedLang === currentLang && (now - Number(cachedTime) < oneDayMs)) {
       setDailySummary(cachedSummary);
       if (!lastReadTime || Number(lastReadTime) < Number(cachedTime)) {
         setHasUnreadNotification(true);
@@ -63,7 +68,7 @@ export default function DashboardPage({ onLogout }) {
     } else {
       fetchDailySummary();
     }
-  }, []);
+  }, [currentLang]);
 
   const openNotifications = () => {
     setShowNotifications(prev => {
