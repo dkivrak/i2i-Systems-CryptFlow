@@ -75,7 +75,13 @@ const resources = {
         dailySummaryTitle: 'Daily AI Summary',
         goToPortfolio: 'Go to Portfolio',
         noNotifications: 'No new notifications.',
-        totalCoinValue: 'Total Crypto Value'
+        totalCoinValue: 'Total Crypto Value',
+        pageInfo: 'Showing: {{start}}-{{end}} / Total: {{total}}',
+        prevPage: 'Previous',
+        nextPage: 'Next',
+        hoverChart: 'Inspect Allocation',
+        hoverDesc: 'Hover over segments to view details.',
+        allocation: 'allocation'
       },
 
       // --- Chat Widget ---
@@ -231,7 +237,13 @@ const resources = {
         dailySummaryTitle: 'Günlük Yapay Zeka Özeti',
         goToPortfolio: 'Portföye Git',
         noNotifications: 'Yeni bildirim yok.',
-        totalCoinValue: 'Sahip Olunan Kripto Değeri'
+        totalCoinValue: 'Sahip Olunan Kripto Değeri',
+        pageInfo: 'Gösterilen: {{start}}-{{end}} / Toplam: {{total}}',
+        prevPage: 'Geri',
+        nextPage: 'İleri',
+        hoverChart: 'Dağılımı İncele',
+        hoverDesc: 'Grafik dilimlerinin üzerine gelerek detayları görün.',
+        allocation: 'oranında'
       },
 
       // --- Chat Widget ---

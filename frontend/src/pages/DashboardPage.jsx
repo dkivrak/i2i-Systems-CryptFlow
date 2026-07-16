@@ -278,89 +278,7 @@ export default function DashboardPage({ onLogout }) {
             <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.totalValueUsd)}</p>
           </div>
 
-          {portfolio?.totalValueUsd > 0 && (
-            <div className="card rounded-2xl p-5 flex items-center justify-between col-span-2">
-              <div className="flex items-center gap-6">
-                {/* SVG Doughnut Chart */}
-                <div className="relative h-14 w-14 flex-shrink-0">
-                  <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90">
-                    {(() => {
-                      const cash = Number(portfolio.usdBalance || 0);
-                      const assets = portfolio.assets || [];
-
-                      const items = [
-                        { symbol: 'USD', value: cash, color: '#10b981' },
-                        ...assets.map((a, idx) => ({
-                          symbol: a.symbol,
-                          value: Number(a.valueUsd || 0),
-                          color: ['#fbbf24', '#6366f1', '#d946ef'][idx]
-                        }))
-                      ].filter(item => item.value > 0);
-
-                      if (items.length === 0) {
-                        return <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="4" />;
-                      }
-
-                      const sum = items.reduce((s, i) => s + i.value, 0);
-                      let cumulativePercent = 0;
-
-                      return items.map((item, index) => {
-                        const percent = (item.value / sum) * 100;
-                        const dashArray = `${percent} ${100 - percent}`;
-                        const dashOffset = -cumulativePercent;
-                        cumulativePercent += percent;
-                        return (
-                          <circle
-                            key={index}
-                            cx="18"
-                            cy="18"
-                            r="15.9155"
-                            fill="transparent"
-                            stroke={item.color}
-                            strokeWidth="4"
-                            strokeDasharray={dashArray}
-                            strokeDashoffset={dashOffset}
-                            className="transition-all duration-300"
-                          />
-                        );
-                      });
-                    })()}
-                  </svg>
-                </div>
-
-                {/* Legend list */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 items-center">
-                  {(() => {
-                    const total = Number(portfolio.totalValueUsd);
-                    const cash = Number(portfolio.usdBalance || 0);
-                    const assets = portfolio.assets || [];
-                    const items = [
-                      { symbol: 'USD', value: cash, color: 'bg-emerald-500' },
-                      ...assets.map((a, idx) => ({
-                        symbol: a.symbol,
-                        value: Number(a.valueUsd || 0),
-                        color: ['bg-amber-400', 'bg-indigo-500', 'bg-fuchsia-500'][idx]
-                      }))
-                    ];
-                    return items.map((item, index) => {
-                      const percent = total > 0 ? (item.value / total) * 100 : 0;
-                      if (percent <= 0) return null;
-                      return (
-                        <div key={index} className="flex items-center gap-2 text-xs">
-                          <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
-                          <span className="text-slate-400">{item.symbol}</span>
-                          <span className="font-bold text-white">{percent.toFixed(1)}%</span>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-              <p className="label hidden sm:block text-[9px] tracking-wider text-slate-500 mr-2">
-                {t('dashboard.assetAllocation')}
-              </p>
-            </div>
-          )}
+          <AssetAllocationChart portfolio={portfolio} t={t} />
         </section>
 
         {(error || marketError) && (
@@ -514,38 +432,169 @@ function PortfolioPanel({ data, t, onTrade }) {
 }
 
 function HistoryPanel({ trades, t, dateLocale }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 5;
+  const totalPages = Math.ceil(trades.length / pageSize);
+
+  const startIndex = currentPage * pageSize;
+  const endIndex = startIndex + pageSize;
+  const pagedTrades = trades.slice(startIndex, endIndex);
+
   return (
-    <div className="card overflow-x-auto rounded-2xl">
-      <table className="w-full min-w-[700px] text-left">
-        <thead className="label border-b border-white/10">
-          <tr>
-            <th className="p-5">{t('dashboard.colTransaction')}</th>
-            <th>{t('dashboard.colQuantity')}</th>
-            <th>{t('dashboard.colPrice')}</th>
-            <th>{t('dashboard.colTotal')}</th>
-            <th>{t('dashboard.colTime')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {trades.length ? (
-            trades.map(t2 => (
-              <tr key={t2.id} className="border-b border-white/5">
-                <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {t2.side} · {t2.symbol}
-                </td>
-                <td>{coin(t2.quantity)}</td>
-                <td>{money(t2.unitPriceUsd)}</td>
-                <td>{money(t2.totalUsd)}</td>
-                <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
-              </tr>
-            ))
-          ) : (
+    <div className="card rounded-2xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px] text-left">
+          <thead className="label border-b border-white/10">
             <tr>
-              <td colSpan="5" className="p-10 text-center text-slate-500">{t('dashboard.noTransactions')}</td>
+              <th className="p-5">{t('dashboard.colTransaction')}</th>
+              <th>{t('dashboard.colQuantity')}</th>
+              <th>{t('dashboard.colPrice')}</th>
+              <th>{t('dashboard.colTotal')}</th>
+              <th>{t('dashboard.colTime')}</th>
             </tr>
+          </thead>
+          <tbody>
+            {pagedTrades.length ? (
+              pagedTrades.map(t2 => (
+                <tr key={t2.id} className="border-b border-white/5">
+                  <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {t2.side} · {t2.symbol}
+                  </td>
+                  <td>{coin(t2.quantity)}</td>
+                  <td>{money(t2.unitPriceUsd)}</td>
+                  <td>{money(t2.totalUsd)}</td>
+                  <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="p-10 text-center text-slate-500">{t('dashboard.noTransactions')}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-white/10 p-5 bg-[#071320]/30">
+          <span className="text-xs text-slate-500">
+            {t('dashboard.pageInfo', {
+              start: startIndex + 1,
+              end: Math.min(endIndex, trades.length),
+              total: trades.length
+            })}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={currentPage === 0}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+            >
+              ← {t('dashboard.prevPage')}
+            </button>
+            <button
+              type="button"
+              disabled={endIndex >= trades.length}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+            >
+              {t('dashboard.nextPage')} →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AssetAllocationChart({ portfolio, t }) {
+  const [hoveredAsset, setHoveredAsset] = useState(null);
+
+  if (!portfolio || !portfolio.totalValueUsd || portfolio.totalValueUsd <= 0) {
+    return null;
+  }
+
+  const cash = Number(portfolio.usdBalance || 0);
+  const assets = portfolio.assets || [];
+
+  const items = [
+    { symbol: 'USD', value: cash, color: '#10b981', bgClass: 'bg-emerald-500' },
+    ...assets.map((a, idx) => ({
+      symbol: a.symbol,
+      value: Number(a.valueUsd || 0),
+      color: ['#fbbf24', '#6366f1', '#d946ef'][idx % 3] || '#fbbf24',
+      bgClass: ['bg-amber-400', 'bg-indigo-500', 'bg-fuchsia-500'][idx % 3] || 'bg-amber-400'
+    }))
+  ].filter(item => item.value > 0);
+
+  const sum = items.reduce((s, i) => s + i.value, 0);
+  let cumulativePercent = 0;
+
+  return (
+    <div className="card rounded-2xl p-5 flex items-center justify-between col-span-2">
+      <div className="flex items-center gap-6">
+        {/* SVG Doughnut Chart */}
+        <div className="relative h-14 w-14 flex-shrink-0">
+          <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90">
+            {items.length === 0 ? (
+              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="4" />
+            ) : (
+              items.map((item, index) => {
+                const percent = (item.value / sum) * 100;
+                const dashArray = `${percent} ${100 - percent}`;
+                const dashOffset = -cumulativePercent;
+                cumulativePercent += percent;
+
+                const isHovered = hoveredAsset?.symbol === item.symbol;
+
+                return (
+                  <circle
+                    key={index}
+                    cx="18"
+                    cy="18"
+                    r="15.9155"
+                    fill="transparent"
+                    stroke={item.color}
+                    strokeWidth={isHovered ? "5.5" : "4"}
+                    strokeDasharray={dashArray}
+                    strokeDashoffset={dashOffset}
+                    className="transition-all duration-200 cursor-pointer origin-center"
+                    onMouseEnter={() => setHoveredAsset({ symbol: item.symbol, value: item.value, percent, color: item.color, bgClass: item.bgClass })}
+                    onMouseLeave={() => setHoveredAsset(null)}
+                  />
+                );
+              })
+            )}
+          </svg>
+        </div>
+
+        {/* Legend list (Interactive Tooltip) */}
+        <div className="flex flex-col justify-center h-14 min-w-[150px]">
+          {hoveredAsset ? (
+            <div className="animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`h-2.5 w-2.5 rounded-full ${hoveredAsset.bgClass}`} />
+                <span className="font-bold text-white text-sm">{hoveredAsset.symbol}</span>
+              </div>
+              <p className="mt-1 text-base font-black text-[#1fc8a4]">
+                {money(hoveredAsset.value)}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {hoveredAsset.percent.toFixed(1)}% {t('dashboard.allocation')}
+              </p>
+            </div>
+          ) : (
+            <div className="text-slate-500 text-xs leading-relaxed animate-in fade-in duration-200">
+              <p className="font-bold text-slate-400">{t('dashboard.hoverChart')}</p>
+              <p className="text-[10px] mt-0.5">{t('dashboard.hoverDesc')}</p>
+            </div>
           )}
-        </tbody>
-      </table>
+        </div>
+      </div>
+      <p className="label hidden sm:block text-[9px] tracking-wider text-slate-500 mr-2">
+        {t('dashboard.assetAllocation')}
+      </p>
     </div>
   );
 }
