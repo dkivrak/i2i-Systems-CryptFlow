@@ -306,7 +306,7 @@ export default function DashboardPage({ onLogout }) {
 
         {/* Tab Content */}
         {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} />}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
 
@@ -377,13 +377,23 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
   );
 }
 
-function PortfolioPanel({ data, t }) {
+function PortfolioPanel({ data, t, onTrade }) {
+  const totalCoinsValue = data?.assets?.reduce((sum, a) => sum + Number(a.valueUsd || 0), 0) || 0;
+
   return (
     <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
-      <div className="card rounded-2xl p-6">
-        <p className="label">{t('dashboard.availableCash')}</p>
-        <p className="mt-3 text-4xl font-black">{money(data?.usdBalance)}</p>
-        <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
+      <div className="card rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <p className="label">{t('dashboard.availableCash')}</p>
+          <p className="mt-3 text-4xl font-black text-white">{money(data?.usdBalance)}</p>
+          <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
+        </div>
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-400">{t('dashboard.totalCoinValue')}</span>
+            <span className="font-bold text-white">{money(totalCoinsValue)}</span>
+          </div>
+        </div>
       </div>
       <div className="card overflow-hidden rounded-2xl">
         <div className="border-b border-white/10 p-6">
@@ -392,10 +402,22 @@ function PortfolioPanel({ data, t }) {
         <div className="divide-y divide-white/5">
           {data?.assets && data.assets.length > 0 ? (
             data.assets.map(a => (
-              <div key={a.symbol} className="grid grid-cols-3 border-b border-white/5 px-6 py-5 last:border-0 items-center">
+              <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
                 <b className="text-sm">{a.symbol}</b>
                 <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
                 <span className="text-right text-sm font-bold text-white">{money(a.valueUsd)}</span>
+                <div className="text-right">
+                  {Number(a.quantity) > 0 ? (
+                    <button
+                      onClick={() => onTrade(a.symbol)}
+                      className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
+                    >
+                      {t('trade.sell')}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-600">—</span>
+                  )}
+                </div>
               </div>
             ))
           ) : (

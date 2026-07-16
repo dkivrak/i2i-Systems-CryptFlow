@@ -74,7 +74,8 @@ const resources = {
         close: 'Close',
         dailySummaryTitle: 'Daily AI Summary',
         goToPortfolio: 'Go to Portfolio',
-        noNotifications: 'No new notifications.'
+        noNotifications: 'No new notifications.',
+        totalCoinValue: 'Total Crypto Value'
       },
 
       // --- Chat Widget ---
@@ -217,7 +218,8 @@ const resources = {
         close: 'Kapat',
         dailySummaryTitle: 'Günlük Yapay Zeka Özeti',
         goToPortfolio: 'Portföye Git',
-        noNotifications: 'Yeni bildirim yok.'
+        noNotifications: 'Yeni bildirim yok.',
+        totalCoinValue: 'Sahip Olunan Kripto Değeri'
       },
 
       // --- Chat Widget ---
