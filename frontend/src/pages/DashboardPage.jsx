@@ -535,10 +535,10 @@ function AssetAllocationChart({ portfolio, t }) {
     <div className="card rounded-2xl p-5 flex items-center justify-between col-span-2">
       <div className="flex items-center gap-6">
         {/* SVG Doughnut Chart */}
-        <div className="relative h-14 w-14 flex-shrink-0">
-          <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90">
+        <div className="relative h-20 w-20 flex-shrink-0">
+          <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90 overflow-visible">
             {items.length === 0 ? (
-              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="4" />
+              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="8" />
             ) : (
               items.map((item, index) => {
                 const percent = (item.value / sum) * 100;
@@ -556,10 +556,14 @@ function AssetAllocationChart({ portfolio, t }) {
                     r="15.9155"
                     fill="transparent"
                     stroke={item.color}
-                    strokeWidth={isHovered ? "5.5" : "4"}
+                    strokeWidth={isHovered ? "10" : "8"}
                     strokeDasharray={dashArray}
                     strokeDashoffset={dashOffset}
-                    className="transition-all duration-200 cursor-pointer origin-center"
+                    className="transition-all duration-300 cursor-pointer"
+                    style={{
+                      transform: isHovered ? 'scale(1.06)' : 'scale(1)',
+                      transformOrigin: '18px 18px',
+                    }}
                     onMouseEnter={() => setHoveredAsset({ symbol: item.symbol, value: item.value, percent, color: item.color, bgClass: item.bgClass })}
                     onMouseLeave={() => setHoveredAsset(null)}
                   />
