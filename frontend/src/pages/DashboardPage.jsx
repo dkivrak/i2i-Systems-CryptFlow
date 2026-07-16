@@ -312,9 +312,10 @@ export default function DashboardPage({ onLogout }) {
 
       {modal && (
         <TradeModal
-          symbol={modal}
-          livePrice={market?.prices?.[modal]}
-          priceStatus={symbolStatuses?.[modal]}
+          symbol={modal.symbol}
+          side={modal.side}
+          livePrice={market?.prices?.[modal.symbol]}
+          priceStatus={symbolStatuses?.[modal.symbol]}
           portfolio={portfolio}
           onClose={() => setModal(null)}
           onComplete={refresh}
@@ -341,7 +342,7 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
           return (
             <button
               key={s}
-              onClick={() => onTrade(s)}
+              onClick={() => onTrade({ symbol: s, side: 'BUY' })}
               className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#1fc8a4]/50"
             >
               <div className="flex items-center justify-between">
@@ -407,7 +408,7 @@ function PortfolioPanel({ data, t, onTrade }) {
                 <div className="text-right">
                   {Number(a.quantity) > 0 ? (
                     <button
-                      onClick={() => onTrade(a.symbol)}
+                      onClick={() => onTrade({ symbol: a.symbol, side: 'SELL' })}
                       className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
                     >
                       {t('trade.sell')}

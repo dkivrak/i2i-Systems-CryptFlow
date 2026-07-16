@@ -5,9 +5,9 @@ import { normalizeQuantityInput } from '../features/trades/quantityInput'
 import { validateTrade } from '../features/trades/tradeValidation'
 import { money } from '../utils/format'
 
-export default function TradeModal({ symbol, livePrice, priceStatus, portfolio, onClose, onComplete }) {
+export default function TradeModal({ symbol, side: initialSide = 'BUY', livePrice, priceStatus, portfolio, onClose, onComplete }) {
   const { t } = useTranslation()
-  const [side, setSide] = useState('BUY')
+  const [side, setSide] = useState(initialSide)
   const [quantity, setQuantity] = useState('')
   const [busy, setBusy] = useState(false)
   const [requestError, setRequestError] = useState('')
