@@ -538,7 +538,7 @@ function AssetAllocationChart({ portfolio, t }) {
         <div className="relative h-20 w-20 flex-shrink-0">
           <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90 overflow-visible">
             {items.length === 0 ? (
-              <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="8" />
+              <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1e293b" strokeWidth="8" />
             ) : (
               items.map((item, index) => {
                 const percent = (item.value / sum) * 100;
@@ -554,7 +554,7 @@ function AssetAllocationChart({ portfolio, t }) {
                     cx="18"
                     cy="18"
                     r="15.9155"
-                    fill="transparent"
+                    fill="none"
                     stroke={item.color}
                     strokeWidth={isHovered ? "10" : "8"}
                     strokeDasharray={dashArray}
