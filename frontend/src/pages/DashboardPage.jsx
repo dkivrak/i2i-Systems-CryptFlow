@@ -5,7 +5,7 @@ import { useMarketStream } from '../hooks/useMarketStream';
 import TradeModal from '../components/TradeModal';
 import ProfileModal from '../components/ProfileModal';
 import { money, coin } from '../utils/format';
-import { getCurrentLanguage, changeAppLanguage } from '../utils/language';
+import { changeAppLanguage } from '../utils/language';
 
 const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL'];
 const DEFAULT_TRADE_PAGE_SIZE = 20;

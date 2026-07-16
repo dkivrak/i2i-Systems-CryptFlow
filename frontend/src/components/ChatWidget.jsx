@@ -42,7 +42,7 @@ export default function ChatWidget() {
     }
   }
 
-  function useSuggestion(text) {
+  function handleSuggestion(text) {
     setMessage(text)
     inputRef.current?.focus()
   }
@@ -82,7 +82,7 @@ export default function ChatWidget() {
             <h3 className="mt-4 text-base font-bold text-white">{t('chat.askAboutPortfolio')}</h3>
             <p className="mt-1.5 text-xs text-slate-500 max-w-[260px] mx-auto leading-relaxed">{t('chat.geminiContext')}</p>
             <div className="mt-5 flex flex-wrap justify-center gap-1.5">
-              {suggestions.map((s, i) => <button key={i} onClick={() => useSuggestion(s)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-400 transition hover:border-[#1fc8a4]/40 hover:bg-[#1fc8a4]/10 hover:text-[#1fc8a4]">{s}</button>)}
+              {suggestions.map((s, i) => <button key={i} onClick={() => handleSuggestion(s)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-400 transition hover:border-[#1fc8a4]/40 hover:bg-[#1fc8a4]/10 hover:text-[#1fc8a4]">{s}</button>)}
             </div>
           </div>
         </div>}
@@ -95,13 +95,13 @@ export default function ChatWidget() {
             ) : (
               <ReactMarkdown
                 components={{
-                  ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-1" {...props} />,
-                  ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-1" {...props} />,
-                  li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
-                  p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0" {...props} />,
-                  strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
-                  a: ({ node, ...props }) => <a className="text-[#1fc8a4] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                  code: ({ node, className, children, ...props }) => {
+                  ul: (props) => <ul className="list-disc pl-4 space-y-1 my-1" {...props} />,
+                  ol: (props) => <ol className="list-decimal pl-4 space-y-1 my-1" {...props} />,
+                  li: (props) => <li className="mb-0.5" {...props} />,
+                  p: (props) => <p className="mb-1.5 last:mb-0" {...props} />,
+                  strong: (props) => <strong className="font-bold text-white" {...props} />,
+                  a: (props) => <a className="text-[#1fc8a4] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                  code: ({ className, children, ...props }) => {
                     const match = /language-(\w+)/.exec(className || '')
                     return match ? (
                       <pre className="bg-black/30 rounded p-2 my-2 overflow-x-auto font-mono text-[11px] text-slate-300">
