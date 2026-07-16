@@ -49,7 +49,7 @@ public class SecurityConfig {
     var allowedOrigins = java.util.Arrays.stream(origins.split(",")).map(String::trim).filter(s -> !s.isBlank()).toList();
     var corsConfig = new CorsConfiguration();
     corsConfig.setAllowedOrigins(allowedOrigins);
-    corsConfig.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+    corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
     corsConfig.setMaxAge(CORS_MAX_AGE_SECONDS);
     var source = new UrlBasedCorsConfigurationSource();
