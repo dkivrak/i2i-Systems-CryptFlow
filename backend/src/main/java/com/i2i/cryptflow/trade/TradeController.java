@@ -1,7 +1,7 @@
 package com.i2i.cryptflow.trade;
 
-import com.i2i.cryptflow.shared.model.AssetSymbol;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -37,5 +37,5 @@ public class TradeController {
     return service.history(userId, page, size);
   }
 
-  public record TradeRequest(@NotNull AssetSymbol symbol, @NotNull TradeSide side, @NotNull BigDecimal quantity) {}
+  public record TradeRequest(@NotBlank String symbol, @NotNull TradeSide side, @NotNull BigDecimal quantity) {}
 }

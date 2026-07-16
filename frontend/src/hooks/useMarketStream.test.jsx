@@ -4,9 +4,10 @@ import { api } from '../api/client'
 import {
   MARKET_RECONNECT_DELAY_MS,
   MARKET_STALE_AFTER_MS,
-  MARKET_SYMBOLS,
   useMarketStream,
 } from './useMarketStream'
+
+const MARKET_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK']
 
 vi.mock('../api/client', () => ({
   api: vi.fn(),

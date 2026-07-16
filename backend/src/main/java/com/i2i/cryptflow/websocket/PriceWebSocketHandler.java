@@ -2,7 +2,8 @@ package com.i2i.cryptflow.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.i2i.cryptflow.market.MarketPriceService;
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -35,7 +36,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 @Component
 public class PriceWebSocketHandler extends TextWebSocketHandler {
   private static final Logger log = LoggerFactory.getLogger(PriceWebSocketHandler.class);
-  private static final List<AssetSymbol> STREAM_SYMBOLS = List.of(AssetSymbol.values());
   private static final int SEND_TIME_LIMIT_MS = 10_000;
   private static final int BUFFER_SIZE_LIMIT_BYTES = 512 * 1024;
   private static final long CONNECT_TIMEOUT_MS = 10_000;
@@ -46,6 +46,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   private final MarketPriceService marketPriceService;
   private final BinanceConnector binanceConnector;
   private final ScheduledExecutorService reconnectExecutor;
+  private final SupportedSymbolsService supportedSymbols;
   private final long connectTimeoutMs;
   private final long initialRetryDelayMs;
   private final long maxRetryDelayMs;
@@ -53,13 +54,13 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   private final Object lifecycleMonitor = new Object();
   private final ConcurrentHashMap<String, ConcurrentWebSocketSessionDecorator> activeSessions =
       new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<AssetSymbol, BinanceConnection> binanceConnections =
+  private final ConcurrentHashMap<String, BinanceConnection> binanceConnections =
       new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<AssetSymbol, ConnectionAttempt> connectionAttempts =
+  private final ConcurrentHashMap<String, ConnectionAttempt> connectionAttempts =
       new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<AssetSymbol, RetryTask> reconnectTasks =
+  private final ConcurrentHashMap<String, RetryTask> reconnectTasks =
       new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<AssetSymbol, Integer> retryCounts =
+  private final ConcurrentHashMap<String, Integer> retryCounts =
       new ConcurrentHashMap<>();
 
   private long lifecycleGeneration;
@@ -68,11 +69,13 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   @Autowired
   public PriceWebSocketHandler(
       ObjectMapper objectMapper,
-      MarketPriceService marketPriceService
+      MarketPriceService marketPriceService,
+      SupportedSymbolsService supportedSymbols
   ) {
     this(
         objectMapper,
         marketPriceService,
+        supportedSymbols,
         defaultConnector(CONNECT_TIMEOUT_MS),
         newReconnectExecutor(),
         CONNECT_TIMEOUT_MS,
@@ -85,6 +88,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   PriceWebSocketHandler(
       ObjectMapper objectMapper,
       MarketPriceService marketPriceService,
+      SupportedSymbolsService supportedSymbols,
       BinanceConnector binanceConnector,
       ScheduledExecutorService reconnectExecutor,
       long connectTimeoutMs,
@@ -94,6 +98,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     this(
         objectMapper,
         marketPriceService,
+        supportedSymbols,
         binanceConnector,
         reconnectExecutor,
         connectTimeoutMs,
@@ -106,6 +111,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   private PriceWebSocketHandler(
       ObjectMapper objectMapper,
       MarketPriceService marketPriceService,
+      SupportedSymbolsService supportedSymbols,
       BinanceConnector binanceConnector,
       ScheduledExecutorService reconnectExecutor,
       long connectTimeoutMs,
@@ -119,6 +125,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
 
     this.objectMapper = Objects.requireNonNull(objectMapper);
     this.marketPriceService = Objects.requireNonNull(marketPriceService);
+    this.supportedSymbols = Objects.requireNonNull(supportedSymbols);
     this.binanceConnector = Objects.requireNonNull(binanceConnector);
     this.reconnectExecutor = Objects.requireNonNull(reconnectExecutor);
     this.connectTimeoutMs = connectTimeoutMs;
@@ -150,7 +157,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     if (replacedSession != null && replacedSession != concurrentSession) {
       closeReactSession(replacedSession, CloseStatus.NORMAL);
     }
-    STREAM_SYMBOLS.forEach(symbol -> ensureBinanceConnection(symbol, generation));
+    supportedSymbols.getSymbols().forEach(symbol -> ensureBinanceConnection(symbol, generation));
   }
 
   @Override
@@ -165,7 +172,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     closeReactSession(concurrentSession, CloseStatus.SERVER_ERROR);
   }
 
-  private void ensureBinanceConnection(AssetSymbol symbol, long generation) {
+  private void ensureBinanceConnection(String symbol, long generation) {
     ConnectionAttempt attempt = null;
     BinanceConnection staleConnection = null;
     synchronized (lifecycleMonitor) {
@@ -219,7 +226,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   }
 
   private void completeConnectionAttempt(
-      AssetSymbol symbol,
+      String symbol,
       ConnectionAttempt attempt,
       WebSocket webSocket,
       Throwable error
@@ -252,7 +259,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   }
 
   private void handleBinanceOpen(
-      AssetSymbol symbol,
+      String symbol,
       ConnectionAttempt attempt,
       WebSocket webSocket
   ) {
@@ -300,7 +307,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   }
 
   private void handleBinanceDisconnect(
-      AssetSymbol symbol,
+      String symbol,
       ConnectionAttempt attempt,
       WebSocket webSocket,
       Throwable error
@@ -326,7 +333,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     }
   }
 
-  private void scheduleReconnect(AssetSymbol symbol, long generation) {
+  private void scheduleReconnect(String symbol, long generation) {
     synchronized (lifecycleMonitor) {
       if (!isConnectionDesiredLocked(generation) || reconnectTasks.containsKey(symbol)) {
         return;
@@ -352,7 +359,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     }
   }
 
-  private void runReconnect(AssetSymbol symbol, RetryTask retryTask) {
+  private void runReconnect(String symbol, RetryTask retryTask) {
     synchronized (lifecycleMonitor) {
       if (!reconnectTasks.remove(symbol, retryTask)
           || !isConnectionDesiredLocked(retryTask.generation)) {
@@ -418,7 +425,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     );
   }
 
-  private void broadcastPrice(AssetSymbol symbol, String binanceMessage) {
+  private void broadcastPrice(String symbol, String binanceMessage) {
     String price = extractPrice(binanceMessage);
     if (price == null || price.isBlank()) {
       return;
@@ -437,7 +444,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
 
     String rawPayload;
     try {
-      rawPayload = objectMapper.writeValueAsString(Map.of("s", symbol.name(), "p", price));
+      rawPayload = objectMapper.writeValueAsString(Map.of("s", symbol, "p", price));
     } catch (Exception exception) {
       log.warn("Binance price could not be serialized for {}: {}", symbol, exception.getMessage());
       return;
@@ -474,7 +481,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   }
 
   private void requestNextMessage(
-      AssetSymbol symbol,
+      String symbol,
       ConnectionAttempt attempt,
       WebSocket webSocket
   ) {
@@ -486,7 +493,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     }
   }
 
-  private boolean isCurrentConnection(AssetSymbol symbol, WebSocket webSocket) {
+  private boolean isCurrentConnection(String symbol, WebSocket webSocket) {
     BinanceConnection current = binanceConnections.get(symbol);
     return current != null && current.webSocket == webSocket && isUsable(current);
   }
@@ -571,8 +578,8 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
         .buildAsync(binanceUri(symbol), listener);
   }
 
-  private static URI binanceUri(AssetSymbol symbol) {
-    String lower = symbol.name().toLowerCase();
+  private static URI binanceUri(String symbol) {
+    String lower = symbol.toLowerCase();
     return URI.create("wss://stream.binance.com/ws/" + lower + "usdt@trade");
   }
 
@@ -607,15 +614,15 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
 
   @FunctionalInterface
   interface BinanceConnector {
-    CompletableFuture<WebSocket> connect(AssetSymbol symbol, WebSocket.Listener listener);
+    CompletableFuture<WebSocket> connect(String symbol, WebSocket.Listener listener);
   }
 
   private final class BinanceListener implements WebSocket.Listener {
-    private final AssetSymbol symbol;
+    private final String symbol;
     private final ConnectionAttempt attempt;
     private final StringBuilder buffer = new StringBuilder();
 
-    private BinanceListener(AssetSymbol symbol, ConnectionAttempt attempt) {
+    private BinanceListener(String symbol, ConnectionAttempt attempt) {
       this.symbol = symbol;
       this.attempt = attempt;
     }

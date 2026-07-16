@@ -1,7 +1,7 @@
 package com.i2i.cryptflow.market;
 
 import com.i2i.cryptflow.shared.error.ApiException;
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
@@ -15,38 +15,40 @@ public class MarketPriceService {
   private static final String UPDATED = "updatedAt";
 
   private final StringRedisTemplate redis;
+  private final SupportedSymbolsService supportedSymbols;
 
-  public MarketPriceService(StringRedisTemplate redis) {
+  public MarketPriceService(StringRedisTemplate redis, SupportedSymbolsService supportedSymbols) {
     this.redis = redis;
+    this.supportedSymbols = supportedSymbols;
   }
 
   public MarketPrices getCurrent() {
     var entries = redis.opsForHash().entries(KEY);
     var prices = new LinkedHashMap<String, BigDecimal>();
-    for (var symbol : AssetSymbol.values()) {
-      var value = entries.get(symbol.name());
+    for (var symbol : supportedSymbols.getSymbols()) {
+      var value = entries.get(symbol);
       if (value == null) throw unavailable();
-      prices.put(symbol.name(), new BigDecimal(value.toString()));
+      prices.put(symbol, new BigDecimal(value.toString()));
     }
     var updated = entries.get(UPDATED);
     if (updated == null) throw unavailable();
     return new MarketPrices(prices, Instant.parse(updated.toString()));
   }
 
-  public BigDecimal price(AssetSymbol symbol) {
-    return getCurrent().prices().get(symbol.name());
+  public BigDecimal price(String symbol) {
+    return getCurrent().prices().get(symbol);
   }
 
-  public void overwrite(Map<AssetSymbol, BigDecimal> prices, Instant time) {
+  public void overwrite(Map<String, BigDecimal> prices, Instant time) {
     var values = new HashMap<String, String>();
-    prices.forEach((s, p) -> values.put(s.name(), p.toPlainString()));
+    prices.forEach((s, p) -> values.put(s, p.toPlainString()));
     values.put(UPDATED, time.toString());
     redis.delete(KEY);
     redis.opsForHash().putAll(KEY, values);
   }
 
-  public void updateSinglePrice(AssetSymbol symbol, BigDecimal price, Instant time) {
-    redis.opsForHash().put(KEY, symbol.name(), price.toPlainString());
+  public void updateSinglePrice(String symbol, BigDecimal price, Instant time) {
+    redis.opsForHash().put(KEY, symbol, price.toPlainString());
     redis.opsForHash().put(KEY, UPDATED, time.toString());
   }
 

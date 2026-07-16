@@ -14,12 +14,13 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.i2i.cryptflow.market.MarketPriceService;
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import java.io.IOException;
 import java.net.http.WebSocket;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -36,6 +37,7 @@ class PriceWebSocketHandlerTest {
   private MarketPriceService marketPriceService;
   private ScheduledExecutorService reconnectExecutor;
   private ScheduledFuture<?> scheduledFuture;
+  private SupportedSymbolsService supportedSymbols;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
@@ -48,6 +50,8 @@ class PriceWebSocketHandlerTest {
         anyLong(),
         eq(TimeUnit.MILLISECONDS)
     );
+    supportedSymbols = mock(SupportedSymbolsService.class);
+    when(supportedSymbols.getSymbols()).thenReturn(List.of("BTC", "ETH", "SOL"));
   }
 
   @Test
@@ -60,7 +64,7 @@ class PriceWebSocketHandlerTest {
     handler.afterConnectionEstablished(firstSession);
     handler.afterConnectionEstablished(secondSession);
 
-    for (AssetSymbol symbol : AssetSymbol.values()) {
+    for (String symbol : List.of("BTC", "ETH", "SOL")) {
       assertEquals(1, connector.calls(symbol).size());
     }
 
@@ -85,7 +89,7 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall btc = connector.calls(AssetSymbol.BTC).getFirst();
+    ConnectionCall btc = connector.calls("BTC").getFirst();
 
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
     btc.listener().onClose(btc.webSocket(), 1000, "normal");
@@ -95,7 +99,7 @@ class PriceWebSocketHandlerTest {
         anyLong(),
         eq(TimeUnit.MILLISECONDS)
     );
-    for (AssetSymbol symbol : AssetSymbol.values()) {
+    for (String symbol : List.of("BTC", "ETH", "SOL")) {
       verify(connector.calls(symbol).getFirst().webSocket())
           .sendClose(1000, "No active React sessions");
     }
@@ -107,7 +111,7 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall btc = connector.calls(AssetSymbol.BTC).getFirst();
+    ConnectionCall btc = connector.calls("BTC").getFirst();
 
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
     btc.future().complete(btc.webSocket());
@@ -123,14 +127,14 @@ class PriceWebSocketHandlerTest {
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
 
-    ConnectionCall firstBtc = connector.calls(AssetSymbol.BTC).getFirst();
+    ConnectionCall firstBtc = connector.calls("BTC").getFirst();
     firstBtc.listener().onError(firstBtc.webSocket(), new IOException("first failure"));
     Runnable firstRetry = scheduledRetry();
     firstRetry.run();
-    assertEquals(2, connector.calls(AssetSymbol.BTC).size());
+    assertEquals(2, connector.calls("BTC").size());
 
     clearInvocations(reconnectExecutor);
-    ConnectionCall secondBtc = connector.calls(AssetSymbol.BTC).get(1);
+    ConnectionCall secondBtc = connector.calls("BTC").get(1);
     secondBtc.listener().onError(secondBtc.webSocket(), new IOException("second failure"));
 
     verify(reconnectExecutor).schedule(
@@ -146,7 +150,7 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall firstBtc = connector.calls(AssetSymbol.BTC).getFirst();
+    ConnectionCall firstBtc = connector.calls("BTC").getFirst();
 
     if (signal == DisconnectSignal.CLOSE) {
       firstBtc.listener().onClose(firstBtc.webSocket(), 1006, "lost");
@@ -156,9 +160,9 @@ class PriceWebSocketHandlerTest {
 
     scheduledRetry().run();
 
-    assertEquals(2, connector.calls(AssetSymbol.BTC).size());
-    assertEquals(1, connector.calls(AssetSymbol.ETH).size());
-    assertEquals(1, connector.calls(AssetSymbol.SOL).size());
+    assertEquals(2, connector.calls("BTC").size());
+    assertEquals(1, connector.calls("ETH").size());
+    assertEquals(1, connector.calls("SOL").size());
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
   }
 
@@ -176,6 +180,7 @@ class PriceWebSocketHandlerTest {
     return new PriceWebSocketHandler(
         new ObjectMapper(),
         marketPriceService,
+        supportedSymbols,
         connector,
         reconnectExecutor,
         10_000,
@@ -204,11 +209,10 @@ class PriceWebSocketHandlerTest {
 
   private abstract static class RecordingConnector
       implements PriceWebSocketHandler.BinanceConnector {
-    private final EnumMap<AssetSymbol, List<ConnectionCall>> calls =
-        new EnumMap<>(AssetSymbol.class);
+    private final Map<String, List<ConnectionCall>> calls = new HashMap<>();
 
     protected ConnectionCall record(
-        AssetSymbol symbol,
+        String symbol,
         WebSocket.Listener listener,
         CompletableFuture<WebSocket> future
     ) {
@@ -220,7 +224,7 @@ class PriceWebSocketHandlerTest {
       return call;
     }
 
-    List<ConnectionCall> calls(AssetSymbol symbol) {
+    List<ConnectionCall> calls(String symbol) {
       return calls.getOrDefault(symbol, List.of());
     }
   }
@@ -228,7 +232,7 @@ class PriceWebSocketHandlerTest {
   private static final class PendingConnector extends RecordingConnector {
     @Override
     public CompletableFuture<WebSocket> connect(
-        AssetSymbol symbol,
+        String symbol,
         WebSocket.Listener listener
     ) {
       var future = new CompletableFuture<WebSocket>();
@@ -240,7 +244,7 @@ class PriceWebSocketHandlerTest {
   private static final class OpeningConnector extends RecordingConnector {
     @Override
     public CompletableFuture<WebSocket> connect(
-        AssetSymbol symbol,
+        String symbol,
         WebSocket.Listener listener
     ) {
       var future = new CompletableFuture<WebSocket>();
@@ -254,7 +258,7 @@ class PriceWebSocketHandlerTest {
   private static final class NonCancellablePendingConnector extends RecordingConnector {
     @Override
     public CompletableFuture<WebSocket> connect(
-        AssetSymbol symbol,
+        String symbol,
         WebSocket.Listener listener
     ) {
       var future = new CompletableFuture<WebSocket>() {

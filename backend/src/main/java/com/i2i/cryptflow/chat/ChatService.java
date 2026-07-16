@@ -2,7 +2,7 @@ package com.i2i.cryptflow.chat;
 
 import com.i2i.cryptflow.market.*;
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import com.i2i.cryptflow.trade.TradeTransactionRepository;
 import com.i2i.cryptflow.user.User;
 import com.i2i.cryptflow.user.UserRepository;
@@ -29,6 +29,7 @@ public class ChatService {
   private final TradeTransactionRepository trades;
   private final PriceSnapshotRepository snapshots;
   private final MarketPriceService market;
+  private final SupportedSymbolsService supportedSymbols;
 
   public ChatService(
       GeminiClient gemini,
@@ -37,7 +38,8 @@ public class ChatService {
       PortfolioAssetRepository assets,
       TradeTransactionRepository trades,
       PriceSnapshotRepository snapshots,
-      MarketPriceService market
+      MarketPriceService market,
+      SupportedSymbolsService supportedSymbols
   ) {
     this.gemini = gemini;
     this.users = users;
@@ -46,6 +48,7 @@ public class ChatService {
     this.trades = trades;
     this.snapshots = snapshots;
     this.market = market;
+    this.supportedSymbols = supportedSymbols;
   }
 
   @Transactional(readOnly = true)
@@ -68,7 +71,7 @@ public class ChatService {
       .append("\nCURRENT PRICES: ").append(market.getCurrent())
       .append("\nRECENT TRADES: ").append(formatRecentTrades(user.getId()));
     
-    for (var symbol : AssetSymbol.values()) {
+    for (var symbol : supportedSymbols.getSymbols()) {
       prompt.append("\n").append(symbol).append(" RECENT PRICES: ").append(formatPriceHistory(symbol));
     }
     
@@ -92,7 +95,7 @@ public class ChatService {
         .toString();
   }
 
-  private String formatPriceHistory(AssetSymbol symbol) {
+  private String formatPriceHistory(String symbol) {
     return snapshots.findTop20BySymbolOrderByRecordedAtDesc(symbol).stream()
         .map(PriceSnapshot::getPriceUsd)
         .toList()

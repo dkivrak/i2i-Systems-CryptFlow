@@ -1,6 +1,5 @@
 package com.i2i.cryptflow.trade;
 
-import com.i2i.cryptflow.shared.model.AssetSymbol;
 import com.i2i.cryptflow.user.User;
 import com.i2i.cryptflow.wallet.Wallet;
 import jakarta.persistence.*;
@@ -13,7 +12,7 @@ public class TradeTransaction {
   @Id private UUID id;
   @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="user_id") private User user;
   @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="wallet_id") private Wallet wallet;
-  @Enumerated(EnumType.STRING) @Column(nullable=false) private AssetSymbol symbol;
+  @Column(nullable=false, length=10) private String symbol;
   @Enumerated(EnumType.STRING) @Column(nullable=false) private TradeSide side;
   @Column(nullable=false, precision=28, scale=8) private BigDecimal quantity;
   @Column(name="unit_price_usd", nullable=false, precision=19, scale=2) private BigDecimal unitPriceUsd;
@@ -22,7 +21,7 @@ public class TradeTransaction {
 
   protected TradeTransaction() {}
 
-  public TradeTransaction(User user, Wallet wallet, AssetSymbol symbol, TradeSide side, BigDecimal quantity, BigDecimal unitPrice, BigDecimal total) {
+  public TradeTransaction(User user, Wallet wallet, String symbol, TradeSide side, BigDecimal quantity, BigDecimal unitPrice, BigDecimal total) {
     id = UUID.randomUUID();
     this.user = user;
     this.wallet = wallet;
@@ -36,7 +35,7 @@ public class TradeTransaction {
 
   public UUID getId() { return id; }
 
-  public AssetSymbol getSymbol() { return symbol; }
+  public String getSymbol() { return symbol; }
 
   public TradeSide getSide() { return side; }
 

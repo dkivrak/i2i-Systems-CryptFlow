@@ -2,7 +2,7 @@ package com.i2i.cryptflow.auth;
 
 import com.i2i.cryptflow.portfolio.*;
 import com.i2i.cryptflow.shared.error.ApiException;
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import com.i2i.cryptflow.user.*;
 import com.i2i.cryptflow.wallet.*;
 import java.math.*;
@@ -24,18 +24,21 @@ public class AuthService {
   private final PortfolioAssetRepository assets;
   private final PasswordEncoder passwords;
   private final SessionService sessions;
+  private final SupportedSymbolsService supportedSymbols;
   private final SecureRandom random = new SecureRandom();
 
   public AuthService(UserRepository users,
                      WalletRepository wallets,
                      PortfolioAssetRepository assets,
                      PasswordEncoder passwordEncoder,
-                     SessionService sessions) {
+                     SessionService sessions,
+                     SupportedSymbolsService supportedSymbols) {
     this.users = users;
     this.wallets = wallets;
     this.assets = assets;
     this.passwords = passwordEncoder;
     this.sessions = sessions;
+    this.supportedSymbols = supportedSymbols;
   }
 
   @Transactional
@@ -47,7 +50,7 @@ public class AuthService {
     var balance = generateInitialBalance();
     var wallet = wallets.save(new Wallet(user, balance));
     // Initialize portfolio with one entry per supported asset symbol
-    for (var symbol : AssetSymbol.values())
+    for (var symbol : supportedSymbols.getSymbols())
       assets.save(new PortfolioAsset(wallet, symbol));
     return new RegisterResult(user.getId(), user.getEmail(), balance);
   }
