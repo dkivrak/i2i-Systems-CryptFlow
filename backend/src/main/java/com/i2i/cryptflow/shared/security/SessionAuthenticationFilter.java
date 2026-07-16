@@ -13,15 +13,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class SessionAuthenticationFilter extends OncePerRequestFilter {
+  private static final String BEARER_PREFIX = "Bearer ";
   private final SessionService sessions;
-  public SessionAuthenticationFilter(SessionService sessions){this.sessions=sessions;}
-  @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws ServletException,IOException {
-    String header=req.getHeader(HttpHeaders.AUTHORIZATION);
-    if(header!=null && header.startsWith("Bearer ")){
-      sessions.resolve(header.substring(7)).ifPresent(userId -> SecurityContextHolder.getContext()
-          .setAuthentication(new UsernamePasswordAuthenticationToken(userId,null,List.of())));
+
+  public SessionAuthenticationFilter(SessionService sessions) {
+    this.sessions = sessions;
+  }
+
+  @Override
+  protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws ServletException, IOException {
+    String header = req.getHeader(HttpHeaders.AUTHORIZATION);
+    if (header != null && header.startsWith(BEARER_PREFIX)) {
+      sessions.resolve(header.substring(BEARER_PREFIX.length())).ifPresent(userId -> SecurityContextHolder.getContext()
+          .setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, List.of())));
     }
-    chain.doFilter(req,res);
+    chain.doFilter(req, res);
   }
 }
-

@@ -11,6 +11,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Orchestrates periodic price updates.
+ * In production, updates snapshots in database based on prices fetched from Redis.
+ */
 @Component
 public class TickerEngine {
   private final MarketPriceService market;

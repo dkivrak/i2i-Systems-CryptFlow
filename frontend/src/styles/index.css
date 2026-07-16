@@ -1,3 +1,14 @@
 @tailwind base; @tailwind components; @tailwind utilities;
 :root{font-family:Inter,system-ui,sans-serif;color:#e8f0f7;background:#07111f;font-synthesis:none}*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh;background:radial-gradient(circle at 15% 0%,rgba(31,200,164,.12),transparent 30%),#07111f}button,input{font:inherit}.card{background:rgba(12,27,44,.88);border:1px solid rgba(129,160,181,.16);box-shadow:0 20px 60px rgba(0,0,0,.18)}.label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#7890a4}.input{width:100%;border:1px solid #243c50;background:#091725;color:#eef7f5;border-radius:.75rem;padding:.8rem 1rem;outline:none}.input:focus{border-color:#1fc8a4;box-shadow:0 0 0 3px rgba(31,200,164,.12)}.btn{border-radius:.75rem;padding:.78rem 1rem;font-weight:700;transition:.2s}.btn-primary{background:#1fc8a4;color:#06140f}.btn-primary:hover{background:#4bdfc0}.btn:disabled{opacity:.5;cursor:not-allowed}.grid-lines{background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:32px 32px}
 
+/* Modal open animation */
+@keyframes modal-in{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.animate-in{animation:modal-in .25s ease-out}
+
+/* Chat widget slide-up animation */
+@keyframes chat-slide-in{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.chat-widget-in{animation:chat-slide-in .2s cubic-bezier(0.16, 1, 0.3, 1)}
+
+/* Scrollbar styling for chat */
+.overflow-y-auto::-webkit-scrollbar{width:6px}.overflow-y-auto::-webkit-scrollbar-track{background:transparent}.overflow-y-auto::-webkit-scrollbar-thumb{background:#243c50;border-radius:3px}.overflow-y-auto::-webkit-scrollbar-thumb:hover{background:#2f5069}
+

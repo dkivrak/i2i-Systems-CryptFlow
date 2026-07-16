@@ -4,6 +4,7 @@ import { token } from './api/client'
 import ProtectedRoute from './auth/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
 import DashboardPage from './pages/DashboardPage'
+import ChatWidget from './components/ChatWidget'
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => Boolean(token.get()))
@@ -21,6 +22,7 @@ export default function App() {
       element={
         <ProtectedRoute authenticated={authenticated}>
           <DashboardPage onLogout={() => setAuthenticated(false)} />
+          <ChatWidget />
         </ProtectedRoute>
       }
     />

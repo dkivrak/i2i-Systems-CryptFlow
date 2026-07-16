@@ -5,6 +5,31 @@ import TradeModal from './TradeModal'
 
 vi.mock('../api/client', () => ({ api: vi.fn() }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key, options) => {
+      const translations = {
+        'trade.symbolTransaction': `${options?.symbol || ''} işlemi`,
+        'trade.newOrder': 'NEW ORDER',
+        'trade.buy': 'Satın al',
+        'trade.sell': 'Sat',
+        'trade.coinQuantity': 'Coin miktarı',
+        'trade.livePrice': 'Canlı Fiyat',
+        'trade.priceUnavailable': 'Fiyat verisi kullanılamıyor.',
+        'trade.priceStale': 'Fiyat verisi güncel değil.',
+        'trade.insufficientUsd': 'Bu işlem için yeterli USD bakiyeniz yok.',
+        'trade.insufficientAssetSimple': 'Satış için yeterli varlık bakiyeniz yok.',
+        'trade.invalidAmount': 'Miktar en fazla 8 ondalık basamaklı pozitif bir sayı olmalıdır.',
+        'trade.processingOrder': 'Emir işleniyor…',
+        'trade.executeOrder': 'Emri gerçekleştir',
+        'trade.available': 'Mevcut:',
+        'trade.owned': 'Sahip olunan:',
+      }
+      return translations[key] || key
+    }
+  })
+}))
+
 const portfolio = {
   usdBalance: '1000.00',
   assets: [

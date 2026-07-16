@@ -10,6 +10,7 @@ const statusesFor = status => Object.fromEntries(MARKET_SYMBOLS.map(symbol => [s
 
 export function useMarketStream() {
   const [market, setMarket] = useState(null)
+  const [basePrices, setBasePrices] = useState(null)
   const [status, setStatus] = useState('connecting')
   const [symbolStatuses, setSymbolStatuses] = useState(() => statusesFor('connecting'))
   const [error, setError] = useState('')
@@ -119,7 +120,7 @@ export function useMarketStream() {
           setError('')
           updateHealth(receivedAt)
         } catch {
-          setError('WebSocket mesajı çözümlenemedi.')
+          setError('Failed to parse WebSocket message.')
         }
       }
 
@@ -150,6 +151,9 @@ export function useMarketStream() {
             ...previous,
             prices: { ...(value?.prices ?? {}), ...(previous.prices ?? {}) },
           } : value)
+          if (value?.prices) {
+            setBasePrices(previous => previous || value.prices)
+          }
         }
       })
       .catch(requestError => {
@@ -177,5 +181,18 @@ export function useMarketStream() {
     }
   }, [])
 
-  return { market, status, symbolStatuses, error }
+  const changes = {}
+  if (basePrices && market?.prices) {
+    for (const symbol of MARKET_SYMBOLS) {
+      const base = Number(basePrices[symbol])
+      const current = Number(market.prices[symbol])
+      if (base > 0 && current > 0) {
+        changes[symbol] = ((current - base) / base) * 100
+      } else {
+        changes[symbol] = 0
+      }
+    }
+  }
+
+  return { market, status, symbolStatuses, error, changes }
 }

@@ -1,9 +1,10 @@
-import { INVALID_AMOUNT_MESSAGE, isPositiveQuantity } from './quantityInput'
+import { isPositiveQuantity } from './quantityInput'
 
-export const PRICE_UNAVAILABLE_MESSAGE = 'Fiyat verisi kullanılamıyor.'
-export const PRICE_STALE_MESSAGE = 'Fiyat verisi güncel değil.'
-export const INSUFFICIENT_USD_MESSAGE = 'Bu işlem için yeterli USD bakiyeniz yok.'
-export const INSUFFICIENT_ASSET_MESSAGE = 'Satış için yeterli varlık bakiyeniz yok.'
+export const PRICE_UNAVAILABLE_MESSAGE = 'trade.priceUnavailable'
+export const PRICE_STALE_MESSAGE = 'trade.priceStale'
+export const INSUFFICIENT_USD_MESSAGE = 'trade.insufficientUsd'
+export const INSUFFICIENT_ASSET_MESSAGE = 'trade.insufficientAssetSimple'
+export const INVALID_AMOUNT_MESSAGE = 'trade.invalidAmount'
 
 export function validateTrade({ quantity, side, symbol, livePrice, priceStatus, portfolio }) {
   if (!isPositiveQuantity(quantity)) return INVALID_AMOUNT_MESSAGE
