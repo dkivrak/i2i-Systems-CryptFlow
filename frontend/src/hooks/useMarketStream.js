@@ -216,5 +216,5 @@ export function useMarketStream() {
     }
   }
 
-  return { market, status, symbolStatuses, error, changes }
+  return { market, status, symbolStatuses, error, changes, dailyOpenPrices, basePrices }
 }

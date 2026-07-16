@@ -12,7 +12,7 @@ const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
-  const { market, status, symbolStatuses, error: marketError, changes } = useMarketStream();
+  const { market, status, symbolStatuses, error: marketError, changes, dailyOpenPrices, basePrices } = useMarketStream();
 
   const [me, setMe] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
@@ -131,7 +131,22 @@ export default function DashboardPage({ onLogout }) {
     const livePrice = Number(market?.prices?.[a.symbol] || 0);
     return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
   }, 0) || 0;
+
+  const baseTotalCryptoValue = portfolio?.assets?.reduce((sum, a) => {
+    const openPrice = Number(dailyOpenPrices?.[a.symbol] || basePrices?.[a.symbol] || 0);
+    return sum + (openPrice > 0 ? Number(a.quantity) * openPrice : Number(a.valueUsd || 0));
+  }, 0) || 0;
+
   const liveTotalEquity = Number(portfolio?.usdBalance || 0) + liveTotalCryptoValue;
+  const baseTotalEquity = Number(portfolio?.usdBalance || 0) + baseTotalCryptoValue;
+
+  const cryptoChangePercent = baseTotalCryptoValue > 0 
+    ? ((liveTotalCryptoValue - baseTotalCryptoValue) / baseTotalCryptoValue) * 100 
+    : 0;
+
+  const equityChangePercent = baseTotalEquity > 0 
+    ? ((liveTotalEquity - baseTotalEquity) / baseTotalEquity) * 100 
+    : 0;
 
   const STREAM_STATUS_VIEW = {
     live: { dot: 'bg-emerald-400', label: t('dashboard.live') },
@@ -280,7 +295,16 @@ export default function DashboardPage({ onLogout }) {
         <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
           <div className="card rounded-2xl p-5">
             <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
-            <p className="mt-2 text-2xl font-black text-white">{money(liveTotalEquity)}</p>
+            <div className="mt-2 flex items-baseline gap-3">
+              <p className="text-2xl font-black text-white">{money(liveTotalEquity)}</p>
+              {equityChangePercent !== 0 && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  equityChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                }`}>
+                  {equityChangePercent >= 0 ? '+' : ''}{equityChangePercent.toFixed(2)}%
+                </span>
+              )}
+            </div>
           </div>
 
           <AssetAllocationChart portfolio={portfolio} market={market} t={t} />
@@ -313,7 +337,7 @@ export default function DashboardPage({ onLogout }) {
 
         {/* Tab Content */}
         {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} t={t} onTrade={setModal} />}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
 
@@ -387,7 +411,7 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
   );
 }
 
-function PortfolioPanel({ data, market, changes, t, onTrade }) {
+function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade }) {
   const totalCoinsValue = data?.assets?.reduce((sum, a) => {
     const livePrice = Number(market?.prices?.[a.symbol] || 0);
     return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
@@ -403,7 +427,16 @@ function PortfolioPanel({ data, market, changes, t, onTrade }) {
         </div>
         <div className="mt-6 border-t border-white/10 pt-4">
           <p className="label text-[10px] tracking-wider">{t('dashboard.totalCoinValue')}</p>
-          <p className="mt-1.5 text-2xl font-black text-white">{money(totalCoinsValue)}</p>
+          <div className="mt-1.5 flex items-baseline gap-3">
+            <p className="text-2xl font-black text-white">{money(totalCoinsValue)}</p>
+            {cryptoChangePercent !== 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                cryptoChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+              }`}>
+                {cryptoChangePercent >= 0 ? '+' : ''}{cryptoChangePercent.toFixed(2)}%
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <div className="card overflow-hidden rounded-2xl">
