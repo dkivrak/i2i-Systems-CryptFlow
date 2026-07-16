@@ -314,6 +314,7 @@ export default function DashboardPage({ onLogout }) {
         <TradeModal
           symbol={modal.symbol}
           side={modal.side}
+          isSellOnly={modal.isSellOnly}
           livePrice={market?.prices?.[modal.symbol]}
           priceStatus={symbolStatuses?.[modal.symbol]}
           portfolio={portfolio}
@@ -408,7 +409,7 @@ function PortfolioPanel({ data, t, onTrade }) {
                 <div className="text-right">
                   {Number(a.quantity) > 0 ? (
                     <button
-                      onClick={() => onTrade({ symbol: a.symbol, side: 'SELL' })}
+                      onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
                       className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
                     >
                       {t('trade.sell')}

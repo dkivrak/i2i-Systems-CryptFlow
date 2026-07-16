@@ -5,7 +5,7 @@ import { normalizeQuantityInput } from '../features/trades/quantityInput'
 import { validateTrade } from '../features/trades/tradeValidation'
 import { money } from '../utils/format'
 
-export default function TradeModal({ symbol, side: initialSide = 'BUY', livePrice, priceStatus, portfolio, onClose, onComplete }) {
+export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOnly = false, livePrice, priceStatus, portfolio, onClose, onComplete }) {
   const { t } = useTranslation()
   const [side, setSide] = useState(initialSide)
   const [quantity, setQuantity] = useState('')
@@ -81,22 +81,28 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', livePric
         </div>
 
         {/* BUY / SELL tabs */}
-        <div className="mt-5 grid grid-cols-2 rounded-xl bg-[#081522] p-1">
-          <button
-            type="button"
-            onClick={() => changeSide('BUY')}
-            className={`rounded-lg py-3 font-bold transition-all ${side === 'BUY' ? 'bg-[#1fc8a4] text-[#06140f]' : 'text-slate-400'} hover:opacity-90`}
-          >
-            {t('trade.buy')}
-          </button>
-          <button
-            type="button"
-            onClick={() => changeSide('SELL')}
-            className={`rounded-lg py-3 font-bold transition-all ${side === 'SELL' ? 'bg-rose-400 text-[#19080d]' : 'text-slate-400'} hover:opacity-90`}
-          >
-            {t('trade.sell')}
-          </button>
-        </div>
+        {!isSellOnly ? (
+          <div className="mt-5 grid grid-cols-2 rounded-xl bg-[#081522] p-1">
+            <button
+              type="button"
+              onClick={() => changeSide('BUY')}
+              className={`rounded-lg py-3 font-bold transition-all ${side === 'BUY' ? 'bg-[#1fc8a4] text-[#06140f]' : 'text-slate-400'} hover:opacity-90`}
+            >
+              {t('trade.buy')}
+            </button>
+            <button
+              type="button"
+              onClick={() => changeSide('SELL')}
+              className={`rounded-lg py-3 font-bold transition-all ${side === 'SELL' ? 'bg-rose-400 text-[#19080d]' : 'text-slate-400'} hover:opacity-90`}
+            >
+              {t('trade.sell')}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl bg-rose-500/10 border border-rose-500/20 py-3 text-center text-rose-400 font-bold text-sm">
+            {t('trade.sell')} ({symbol})
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-6">
           <label htmlFor="trade-quantity" className="text-sm text-slate-300">{t('trade.coinQuantity')}</label>
