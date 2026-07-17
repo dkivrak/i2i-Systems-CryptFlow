@@ -164,7 +164,6 @@ export default function DashboardPage({ onLogout }) {
           <div className="flex items-center gap-3">
             <span className="h-2.5 w-2.5 rounded-full bg-[#1fc8a4] shadow-[0_0_18px_#1fc8a4]" />
             <span className="font-black tracking-tight">CRYPTFLOW</span>
-            <span className="hidden sm:inline text-xs text-slate-600">{t('dashboard.marketLab')}</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
             {/* Language flags */}
