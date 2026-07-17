@@ -27,6 +27,9 @@ services:
 
   backend:
     build: ./backend
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/cryptflow}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-cryptflow}

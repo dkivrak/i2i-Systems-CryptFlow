@@ -25,14 +25,30 @@ public class MarketPriceService {
   public MarketPrices getCurrent() {
     var entries = redis.opsForHash().entries(KEY);
     var prices = new LinkedHashMap<String, BigDecimal>();
+    boolean missingAny = false;
+
     for (var symbol : supportedSymbols.getSymbols()) {
       var value = entries.get(symbol);
-      if (value == null) throw unavailable();
-      prices.put(symbol, new BigDecimal(value.toString()));
+      if (value != null) {
+        prices.put(symbol, new BigDecimal(value.toString()));
+      } else {
+        BigDecimal fallback = supportedSymbols.getInitialPrice(symbol);
+        if (fallback == null) {
+          fallback = new BigDecimal("1.00");
+        }
+        prices.put(symbol, fallback);
+        redis.opsForHash().put(KEY, symbol, fallback.toPlainString());
+        missingAny = true;
+      }
     }
+
     var updated = entries.get(UPDATED);
-    if (updated == null) throw unavailable();
-    return new MarketPrices(prices, Instant.parse(updated.toString()));
+    Instant updateTime = updated != null ? Instant.parse(updated.toString()) : Instant.now();
+    if (updated == null || missingAny) {
+      redis.opsForHash().put(KEY, UPDATED, updateTime.toString());
+    }
+
+    return new MarketPrices(prices, updateTime);
   }
 
   public BigDecimal price(String symbol) {

@@ -367,11 +367,23 @@ export default function DashboardPage({ onLogout }) {
 }
 
 function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30;
+
+  const totalPages = Math.ceil(symbols.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedSymbols = symbols.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [symbols.length]);
+
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-3">
-        {symbols.map((s, i) => {
+        {displayedSymbols.map((s, i) => {
           const asset = portfolio?.assets?.find(a => a.symbol === s);
+          const globalIndex = startIndex + i;
           return (
             <button
               key={s}
@@ -379,7 +391,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
               className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#1fc8a4]/50"
             >
               <div className="flex items-center justify-between">
-                <CoinLogo symbol={s} index={i} />
+                <CoinLogo symbol={s} index={globalIndex} />
                 <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
               </div>
               <p className="mt-6 label">{s} / USD</p>
@@ -401,19 +413,65 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
           );
         })}
       </div>
-      <p className="mt-4 text-xs text-slate-600">
-        {t('dashboard.lastPriceUpdate')}{' '}
-        {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
-      </p>
+
+      {totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+          <p className="text-xs text-slate-600">
+            {t('dashboard.lastPriceUpdate')}{' '}
+            {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
+              aria-label="Previous Page"
+            >
+              ←
+            </button>
+            <span className="text-sm font-semibold text-slate-300">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
+              aria-label="Next Page"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {totalPages <= 1 && (
+        <p className="mt-4 text-xs text-slate-600">
+          {t('dashboard.lastPriceUpdate')}{' '}
+          {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
+        </p>
+      )}
     </div>
   );
 }
 
 function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade }) {
-  const totalCoinsValue = data?.assets?.reduce((sum, a) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const activeAssets = data?.assets?.filter(a => Number(a.quantity) > 0) || [];
+
+  const totalCoinsValue = activeAssets.reduce((sum, a) => {
     const livePrice = Number(market?.prices?.[a.symbol] || 0);
     return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
-  }, 0) || 0;
+  }, 0);
+
+  const totalPages = Math.ceil(activeAssets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedAssets = activeAssets.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeAssets.length]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
@@ -437,48 +495,76 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
           </div>
         </div>
       </div>
-      <div className="card overflow-hidden rounded-2xl">
-        <div className="border-b border-white/10 p-6">
-          <p className="label">{t('dashboard.assetAllocation')}</p>
-        </div>
-        <div className="divide-y divide-white/5">
-          {data?.assets && data.assets.length > 0 ? (
-            data.assets.map(a => {
-              const livePrice = Number(market?.prices?.[a.symbol] || 0);
-              const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
-              return (
-                <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
-                  <b className="text-sm">{a.symbol}</b>
-                  <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
-                  <div className="text-right flex items-center justify-end gap-2.5">
-                    <span className="text-sm font-bold text-white">{money(liveValue)}</span>
-                    {changes?.[a.symbol] !== undefined && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        changes[a.symbol] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                      }`}>
-                        {changes[a.symbol] >= 0 ? '+' : ''}{changes[a.symbol].toFixed(2)}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {Number(a.quantity) > 0 ? (
+      <div className="card overflow-hidden rounded-2xl flex flex-col justify-between">
+        <div>
+          <div className="border-b border-white/10 p-6">
+            <p className="label">{t('dashboard.assetAllocation')}</p>
+          </div>
+          <div className="divide-y divide-white/5">
+            {displayedAssets.length > 0 ? (
+              displayedAssets.map(a => {
+                const livePrice = Number(market?.prices?.[a.symbol] || 0);
+                const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
+                return (
+                  <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
+                    <b className="text-sm">{a.symbol}</b>
+                    <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
+                    <div className="text-right flex items-center justify-end gap-2.5">
+                      <span className="text-sm font-bold text-white">{money(liveValue)}</span>
+                      {changes?.[a.symbol] !== undefined && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          changes[a.symbol] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                        }`}>
+                          {changes[a.symbol] >= 0 ? '+' : ''}{changes[a.symbol].toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
                       <button
                         onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
                         className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
                       >
                         {t('trade.sell')}
                       </button>
-                    ) : (
-                      <span className="text-xs text-slate-600">—</span>
-                    )}
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
-          )}
+                );
+              })
+            ) : (
+              <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
+            )}
+          </div>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-white/10 p-5 bg-[#071320]/30 mt-auto">
+            <span className="text-xs text-slate-500">
+              {t('dashboard.pageInfo', {
+                start: startIndex + 1,
+                end: Math.min(startIndex + itemsPerPage, activeAssets.length),
+                total: activeAssets.length
+              })}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+              >
+                ← {t('dashboard.prevPage')}
+              </button>
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+              >
+                {t('dashboard.nextPage')} →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -616,6 +702,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
                     strokeWidth={isHovered ? "10" : "8"}
                     strokeDasharray={dashArray}
                     strokeDashoffset={dashOffset}
+                    pointerEvents="stroke"
                     className="transition-all duration-300 cursor-pointer"
                     style={{
                       transform: isHovered ? 'scale(1.06)' : 'scale(1)',

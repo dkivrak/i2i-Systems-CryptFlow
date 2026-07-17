@@ -99,6 +99,10 @@ public class TickerEngine {
     if (configuredPrices.containsKey(symbol)) {
       return configuredPrices.get(symbol);
     }
-    return supportedSymbols.getInitialPrice(symbol);
+    BigDecimal price = supportedSymbols.getInitialPrice(symbol);
+    if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+      return price;
+    }
+    return new BigDecimal("1.00");
   }
 }

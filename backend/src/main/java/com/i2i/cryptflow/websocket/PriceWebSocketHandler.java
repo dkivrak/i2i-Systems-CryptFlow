@@ -639,6 +639,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
           if (isCurrentConnection(symbol, webSocket)) {
             com.fasterxml.jackson.databind.JsonNode arrayNode = objectMapper.readTree(message);
             if (arrayNode.isArray()) {
+              List<Map<String, String>> batch = new ArrayList<>();
               for (com.fasterxml.jackson.databind.JsonNode node : arrayNode) {
                 String pair = node.get("s").asText();
                 String priceStr = node.get("c").asText();
@@ -648,11 +649,14 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
                     BigDecimal parsedPrice = new BigDecimal(priceStr);
                     if (parsedPrice.signum() > 0) {
                       marketPriceService.updateSinglePrice(coin, parsedPrice, Instant.now());
-                      String rawPayload = objectMapper.writeValueAsString(Map.of("s", coin, "p", parsedPrice.toPlainString()));
-                      broadcastRawPayload(coin, rawPayload);
+                      batch.add(Map.of("s", coin, "p", parsedPrice.toPlainString()));
                     }
                   }
                 }
+              }
+              if (!batch.isEmpty()) {
+                String rawPayload = objectMapper.writeValueAsString(batch);
+                broadcastRawPayload("global-ticker", rawPayload);
               }
             }
           }

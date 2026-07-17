@@ -67,7 +67,12 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
       await onComplete()
     } catch (requestErrorValue) {
       if (latestContextRef.current === submittedContext) {
-        setRequestError(requestErrorValue.message)
+        const msg = requestErrorValue.message
+        if (msg === 'Total order value must be at least $0.01.') {
+          setRequestError(t('trade.minimumOrderValue'))
+        } else {
+          setRequestError(msg)
+        }
       }
       setShowApproveStep(false)
     } finally {

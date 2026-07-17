@@ -1,6 +1,7 @@
 package com.i2i.cryptflow.trade;
 
 import com.i2i.cryptflow.market.MarketPriceService;
+import com.i2i.cryptflow.portfolio.PortfolioAsset;
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
 import com.i2i.cryptflow.shared.error.ApiException;
 import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
@@ -40,10 +41,18 @@ public class TradeService {
       throw invalidAmount();
     var quantity = rawQuantity.setScale(MAX_DECIMAL_PLACES, RoundingMode.UNNECESSARY);
     var wallet = wallets.findByUserIdForUpdate(userId).orElseThrow();
-    var asset = assets.findForUpdate(wallet.getId(), symbol).orElseThrow();
-    var price = market.price(symbol).setScale(2, RoundingMode.HALF_UP);
+    var asset = assets.findForUpdate(wallet.getId(), symbol)
+        .orElseGet(() -> {
+          if (side == TradeSide.SELL) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_ASSET_BALANCE", "Insufficient asset balance for sale.");
+          }
+          return assets.save(new PortfolioAsset(wallet, symbol));
+        });
+    var price = market.price(symbol).setScale(MAX_DECIMAL_PLACES, RoundingMode.HALF_UP);
     var total = quantity.multiply(price).setScale(2, RoundingMode.HALF_UP);
-    if (total.signum() <= 0) throw invalidAmount();
+    if (total.signum() <= 0) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "MINIMUM_ORDER_VALUE", "Total order value must be at least $0.01.");
+    }
     if (side == TradeSide.BUY) {
       if (wallet.getUsdBalance().compareTo(total) < 0)
         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_FUNDS", "Insufficient USD balance for this transaction.");

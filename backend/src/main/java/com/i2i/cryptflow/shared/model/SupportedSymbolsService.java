@@ -52,10 +52,12 @@ public class SupportedSymbolsService {
           if (pair.endsWith(USDT_SUFFIX)) {
             String coin = pair.substring(0, pair.length() - USDT_SUFFIX.length());
             if (!coin.isEmpty() && !coin.contains("UP") && !coin.contains("DOWN") && !coin.contains("BULL") && !coin.contains("BEAR")) {
-              fetched.add(coin);
               try {
                 BigDecimal price = new BigDecimal(node.get("price").asText());
-                initialPrices.put(coin, price);
+                if (price.compareTo(BigDecimal.ZERO) > 0) {
+                  initialPrices.put(coin, price);
+                  fetched.add(coin);
+                }
               } catch (Exception ignored) {}
             }
           }
