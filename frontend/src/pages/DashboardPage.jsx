@@ -474,16 +474,18 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
 
   return (
     <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
-      <div className="card rounded-2xl p-6 flex flex-col justify-between">
-        <div>
+      <div className="flex flex-col gap-6">
+        {/* Card 1: Available Cash */}
+        <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
           <p className="label">{t('dashboard.availableCash')}</p>
           <p className="mt-3 text-4xl font-black text-white">{money(data?.usdBalance)}</p>
           <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
         </div>
-        <div className="mt-6 border-t border-white/10 pt-4">
-          <p className="label text-[10px] tracking-wider">{t('dashboard.totalCoinValue')}</p>
-          <div className="mt-1.5 flex items-baseline gap-3">
-            <p className="text-2xl font-black text-white">{money(totalCoinsValue)}</p>
+        {/* Card 2: Total Crypto Value */}
+        <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
+          <p className="label">{t('dashboard.totalCoinValue')}</p>
+          <div className="mt-3 flex items-baseline gap-3">
+            <p className="text-4xl font-black text-white">{money(totalCoinsValue)}</p>
             {cryptoChangePercent !== 0 && (
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                 cryptoChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
@@ -492,6 +494,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
               </span>
             )}
           </div>
+          <p className="mt-2 text-sm text-slate-500">{t('dashboard.totalCoinValueDesc')}</p>
         </div>
       </div>
       <div className="card overflow-hidden rounded-2xl flex flex-col justify-between">
