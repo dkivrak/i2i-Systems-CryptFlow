@@ -83,6 +83,6 @@ public class SupportedSymbolsService {
   }
 
   public BigDecimal getInitialPrice(String symbol) {
-    return initialPrices.getOrDefault(symbol, new BigDecimal("1.00"));
+    return initialPrices.get(symbol);
   }
 }

@@ -52,12 +52,17 @@ public class TickerEngine {
     boolean usedInitialPrice = false;
 
     for (var symbol : supportedSymbols.getSymbols()) {
-      var latest = snapshots.findFirstBySymbolOrderByRecordedAtDesc(symbol);
-      if (latest.isPresent()) {
-        prices.put(symbol, latest.get().getPriceUsd());
+      BigDecimal fetched = supportedSymbols.getInitialPrice(symbol);
+      if (fetched != null) {
+        prices.put(symbol, fetched);
       } else {
-        prices.put(symbol, getInitialPrice(symbol));
-        usedInitialPrice = true;
+        var latest = snapshots.findFirstBySymbolOrderByRecordedAtDesc(symbol);
+        if (latest.isPresent()) {
+          prices.put(symbol, latest.get().getPriceUsd());
+        } else {
+          prices.put(symbol, getInitialPrice(symbol));
+          usedInitialPrice = true;
+        }
       }
     }
 

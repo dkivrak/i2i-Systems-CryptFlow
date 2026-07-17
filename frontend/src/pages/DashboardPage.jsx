@@ -660,23 +660,27 @@ function AssetAllocationChart({ portfolio, market, t }) {
   );
 }
 
-function CoinLogo({ symbol, index }) {
+function CoinLogo({ symbol }) {
   const [imgError, setImgError] = useState(false);
 
-  const colors = [
-    'bg-amber-300 text-amber-950',
-    'bg-indigo-300 text-indigo-950',
-    'bg-fuchsia-300 text-fuchsia-950',
-    'bg-emerald-300 text-emerald-950',
-    'bg-sky-300 text-sky-950',
-    'bg-rose-300 text-rose-950'
-  ];
-  const bgClass = colors[index % colors.length] || 'bg-amber-300 text-amber-950';
+  const getSymbolGradient = (sym) => {
+    let hash = 0;
+    for (let i = 0; i < sym.length; i++) {
+      hash = sym.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h1 = Math.abs(hash % 360);
+    const h2 = (h1 + 60) % 360;
+    return `linear-gradient(135deg, hsl(${h1}, 85%, 60%), hsl(${h2}, 90%, 40%))`;
+  };
 
   if (imgError) {
+    const displaySymbol = symbol.length > 4 ? symbol.slice(0, 3) : symbol;
     return (
-      <span className={`grid h-11 w-11 place-items-center rounded-full font-black text-sm ${bgClass}`}>
-        {symbol[0]}
+      <span
+        style={{ background: getSymbolGradient(symbol) }}
+        className="grid h-11 w-11 place-items-center rounded-full font-black text-[10px] text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)] tracking-tight uppercase"
+      >
+        {displaySymbol}
       </span>
     );
   }

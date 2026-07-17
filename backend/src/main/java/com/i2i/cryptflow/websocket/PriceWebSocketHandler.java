@@ -76,7 +76,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
         objectMapper,
         marketPriceService,
         supportedSymbols,
-        defaultConnector(supportedSymbols, CONNECT_TIMEOUT_MS),
+        defaultConnector(CONNECT_TIMEOUT_MS),
         newReconnectExecutor(),
         CONNECT_TIMEOUT_MS,
         INITIAL_RETRY_DELAY_MS,
@@ -157,10 +157,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     if (replacedSession != null && replacedSession != concurrentSession) {
       closeReactSession(replacedSession, CloseStatus.NORMAL);
     }
-    List<List<String>> groups = getSymbolGroups(supportedSymbols);
-    for (int i = 0; i < groups.size(); i++) {
-      ensureBinanceConnection("group-" + i, generation);
-    }
+    ensureBinanceConnection("global-ticker", generation);
   }
 
   @Override
@@ -569,35 +566,16 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
   }
 
-  private static List<List<String>> getSymbolGroups(SupportedSymbolsService supportedSymbols) {
-    List<String> allSymbols = supportedSymbols.getSymbols();
-    List<List<String>> groups = new ArrayList<>();
-    int groupSize = 150;
-    for (int i = 0; i < allSymbols.size(); i += groupSize) {
-      groups.add(allSymbols.subList(i, Math.min(i + groupSize, allSymbols.size())));
-    }
-    return groups;
+  private static URI getBinanceUri() {
+    return URI.create("wss://stream.binance.com/ws/!miniTicker@arr");
   }
 
-  private static URI getBinanceGroupUri(SupportedSymbolsService supportedSymbols, String groupKey) {
-    int index = Integer.parseInt(groupKey.substring(6));
-    List<List<String>> groups = getSymbolGroups(supportedSymbols);
-    List<String> groupSymbols = groups.get(index);
-    
-    StringBuilder sb = new StringBuilder("wss://stream.binance.com/stream?streams=");
-    for (int i = 0; i < groupSymbols.size(); i++) {
-      if (i > 0) sb.append("/");
-      sb.append(groupSymbols.get(i).toLowerCase()).append("usdt@trade");
-    }
-    return URI.create(sb.toString());
-  }
-
-  private static BinanceConnector defaultConnector(SupportedSymbolsService supportedSymbols, long connectTimeoutMs) {
+  private static BinanceConnector defaultConnector(long connectTimeoutMs) {
     HttpClient httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofMillis(connectTimeoutMs))
         .build();
     return (symbol, listener) -> httpClient.newWebSocketBuilder()
-        .buildAsync(getBinanceGroupUri(supportedSymbols, symbol), listener);
+        .buildAsync(getBinanceUri(), listener);
   }
 
   private static ScheduledExecutorService newReconnectExecutor() {
@@ -659,25 +637,28 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
           String message = buffer.toString();
           buffer.setLength(0);
           if (isCurrentConnection(symbol, webSocket)) {
-            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(message);
-            com.fasterxml.jackson.databind.JsonNode dataNode = root.get("data");
-            if (dataNode != null) {
-              String pair = dataNode.get("s").asText();
-              String priceStr = dataNode.get("p").asText();
-              if (pair.endsWith("USDT")) {
-                String coin = pair.substring(0, pair.length() - 4);
-                BigDecimal parsedPrice = new BigDecimal(priceStr);
-                if (parsedPrice.signum() > 0) {
-                  marketPriceService.updateSinglePrice(coin, parsedPrice, Instant.now());
-                  String rawPayload = objectMapper.writeValueAsString(Map.of("s", coin, "p", parsedPrice.toPlainString()));
-                  broadcastRawPayload(coin, rawPayload);
+            com.fasterxml.jackson.databind.JsonNode arrayNode = objectMapper.readTree(message);
+            if (arrayNode.isArray()) {
+              for (com.fasterxml.jackson.databind.JsonNode node : arrayNode) {
+                String pair = node.get("s").asText();
+                String priceStr = node.get("c").asText();
+                if (pair.endsWith("USDT")) {
+                  String coin = pair.substring(0, pair.length() - 4);
+                  if (supportedSymbols.isSupported(coin)) {
+                    BigDecimal parsedPrice = new BigDecimal(priceStr);
+                    if (parsedPrice.signum() > 0) {
+                      marketPriceService.updateSinglePrice(coin, parsedPrice, Instant.now());
+                      String rawPayload = objectMapper.writeValueAsString(Map.of("s", coin, "p", parsedPrice.toPlainString()));
+                      broadcastRawPayload(coin, rawPayload);
+                    }
+                  }
                 }
               }
             }
           }
         }
       } catch (Exception exception) {
-        log.warn("Binance message handling failed for group {}: {}", symbol, exception.getMessage());
+        log.warn("Binance message handling failed for global ticker: {}", exception.getMessage());
       } finally {
         if (isCurrentConnection(symbol, webSocket)) {
           requestNextMessage(symbol, attempt, webSocket);

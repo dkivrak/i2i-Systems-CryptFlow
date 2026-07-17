@@ -64,7 +64,7 @@ class PriceWebSocketHandlerTest {
     handler.afterConnectionEstablished(firstSession);
     handler.afterConnectionEstablished(secondSession);
 
-    assertEquals(1, connector.calls("group-0").size());
+    assertEquals(1, connector.calls("global-ticker").size());
 
     handler.afterConnectionClosed(firstSession, CloseStatus.NORMAL);
     handler.afterConnectionClosed(secondSession, CloseStatus.NORMAL);
@@ -87,7 +87,7 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall group0 = connector.calls("group-0").getFirst();
+    ConnectionCall group0 = connector.calls("global-ticker").getFirst();
 
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
     group0.listener().onClose(group0.webSocket(), 1000, "normal");
@@ -106,7 +106,7 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall group0 = connector.calls("group-0").getFirst();
+    ConnectionCall group0 = connector.calls("global-ticker").getFirst();
 
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
     group0.future().complete(group0.webSocket());
@@ -122,14 +122,14 @@ class PriceWebSocketHandlerTest {
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
 
-    ConnectionCall firstGroup = connector.calls("group-0").getFirst();
+    ConnectionCall firstGroup = connector.calls("global-ticker").getFirst();
     firstGroup.listener().onError(firstGroup.webSocket(), new IOException("first failure"));
     Runnable firstRetry = scheduledRetry();
     firstRetry.run();
-    assertEquals(2, connector.calls("group-0").size());
+    assertEquals(2, connector.calls("global-ticker").size());
 
     clearInvocations(reconnectExecutor);
-    ConnectionCall secondGroup = connector.calls("group-0").get(1);
+    ConnectionCall secondGroup = connector.calls("global-ticker").get(1);
     secondGroup.listener().onError(secondGroup.webSocket(), new IOException("second failure"));
 
     verify(reconnectExecutor).schedule(
@@ -145,7 +145,7 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall firstGroup = connector.calls("group-0").getFirst();
+    ConnectionCall firstGroup = connector.calls("global-ticker").getFirst();
 
     if (signal == DisconnectSignal.CLOSE) {
       firstGroup.listener().onClose(firstGroup.webSocket(), 1006, "lost");
@@ -155,7 +155,7 @@ class PriceWebSocketHandlerTest {
 
     scheduledRetry().run();
 
-    assertEquals(2, connector.calls("group-0").size());
+    assertEquals(2, connector.calls("global-ticker").size());
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
   }
 
