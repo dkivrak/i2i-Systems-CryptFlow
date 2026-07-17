@@ -126,7 +126,7 @@ export default function DashboardPage({ onLogout }) {
     }
   }
 
-  if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1fc8a4] border-t-transparent" /></div>;
+  if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#00d8f6] border-t-transparent" /></div>;
   const liveTotalCryptoValue = portfolio?.assets?.reduce((sum, a) => {
     const livePrice = Number(market?.prices?.[a.symbol] || 0);
     return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
@@ -161,9 +161,9 @@ export default function DashboardPage({ onLogout }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111f]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#1fc8a4] shadow-[0_0_18px_#1fc8a4]" />
-            <span className="font-black tracking-tight">CRYPTFLOW</span>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-10 w-10 object-contain" />
+            <span className="font-black tracking-tight text-lg text-gradient">CRYPTFLOW</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
             {/* Language flags */}
@@ -172,7 +172,7 @@ export default function DashboardPage({ onLogout }) {
                 onClick={() => changeAppLanguage('en')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'en'
-                    ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
+                    ? 'ring-2 ring-[#00d8f6] ring-offset-2 ring-offset-[#040a15] opacity-100'
                     : 'opacity-40 hover:opacity-80'
                 } rounded-full`}
                 title="English"
@@ -190,7 +190,7 @@ export default function DashboardPage({ onLogout }) {
                 onClick={() => changeAppLanguage('tr')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'tr'
-                    ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
+                    ? 'ring-2 ring-[#00d8f6] ring-offset-2 ring-offset-[#040a15] opacity-100'
                     : 'opacity-40 hover:opacity-80'
                 } rounded-full`}
                 title="Türkçe"
@@ -211,7 +211,7 @@ export default function DashboardPage({ onLogout }) {
             <div className="relative">
               <button
                 onClick={openNotifications}
-                className="text-slate-400 hover:text-[#1fc8a4] transition-colors relative flex items-center"
+                className="text-slate-400 hover:text-[#00d8f6] transition-colors relative flex items-center"
                 aria-label="Notifications"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -236,7 +236,7 @@ export default function DashboardPage({ onLogout }) {
                     <div className="space-y-3">
                       <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
                         <div className="flex gap-2">
-                          <span className="text-[#1fc8a4] text-xs">✦</span>
+                          <span className="text-[#00d8f6] text-xs">✦</span>
                           <div>
                             <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle')}</p>
                             <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
@@ -247,7 +247,7 @@ export default function DashboardPage({ onLogout }) {
                             setTab('portfolio');
                             setShowNotifications(false);
                           }}
-                          className="mt-3 w-full rounded-lg bg-[#1fc8a4]/10 py-1.5 text-center text-xs font-bold text-[#1fc8a4] hover:bg-[#1fc8a4]/20 transition"
+                          className="mt-3 w-full rounded-lg bg-[#00d8f6]/10 py-1.5 text-center text-xs font-bold text-[#00d8f6] hover:bg-[#00d8f6]/20 transition"
                         >
                           {t('dashboard.goToPortfolio')}
                         </button>
@@ -262,7 +262,7 @@ export default function DashboardPage({ onLogout }) {
 
             <button
               onClick={() => setShowProfile(true)}
-              className="text-slate-400 hover:text-[#1fc8a4] transition-colors"
+              className="text-slate-400 hover:text-[#00d8f6] transition-colors"
               aria-label="Profile"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -281,7 +281,7 @@ export default function DashboardPage({ onLogout }) {
           <p className="label">{t('dashboard.portfolioOverview')}</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
             {t('dashboard.hello')}{' '}
-            <span className="text-[#1fc8a4]">
+            <span className="text-gradient">
               {sessionStorage.getItem('cryptflow_firstName') && sessionStorage.getItem('cryptflow_lastName')
                 ? `${sessionStorage.getItem('cryptflow_firstName')} ${sessionStorage.getItem('cryptflow_lastName')}`
                 : me?.email?.split('@')[0]}
@@ -336,7 +336,7 @@ export default function DashboardPage({ onLogout }) {
               key={id}
               onClick={() => setTab(id)}
               className={`whitespace-nowrap border-b-2 px-5 py-3 text-sm font-bold ${
-                tab === id ? 'border-[#1fc8a4] text-white' : 'border-transparent text-slate-500'
+                tab === id ? 'border-[#00d8f6] text-[#00d8f6]' : 'border-transparent text-slate-500'
               }`}
             >
               {label}
@@ -397,7 +397,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
             <button
               key={s}
               onClick={() => onTrade({ symbol: s, side: 'BUY' })}
-              className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#1fc8a4]/50"
+              className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50"
             >
               <div className="flex items-center justify-between">
                 <CoinLogo symbol={s} index={globalIndex} />
@@ -737,7 +737,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
                 <span className={`h-2.5 w-2.5 rounded-full ${hoveredAsset.bgClass}`} />
                 <span className="font-bold text-white text-sm">{hoveredAsset.symbol}</span>
               </div>
-              <p className="mt-1 text-base font-black text-[#1fc8a4]">
+              <p className="mt-1 text-base font-black text-[#00d8f6]">
                 {money(hoveredAsset.value)}
               </p>
               <p className="text-[10px] text-slate-500">

@@ -78,18 +78,18 @@ export default function ChatWidget() {
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {!messages.length && <div className="flex h-full items-center justify-center text-center">
           <div>
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-[#1fc8a4]/20 to-emerald-900/20 text-2xl text-[#1fc8a4] ring-1 ring-[#1fc8a4]/20">✦</div>
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-[#00d8f6]/20 to-cyan-950/20 text-2xl text-[#00d8f6] ring-1 ring-[#00d8f6]/20">✦</div>
             <h3 className="mt-4 text-base font-bold text-white">{t('chat.askAboutPortfolio')}</h3>
             <p className="mt-1.5 text-xs text-slate-500 max-w-[260px] mx-auto leading-relaxed">{t('chat.geminiContext')}</p>
             <div className="mt-5 flex flex-wrap justify-center gap-1.5">
-              {suggestions.map((s, i) => <button key={i} onClick={() => handleSuggestion(s)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-400 transition hover:border-[#1fc8a4]/40 hover:bg-[#1fc8a4]/10 hover:text-[#1fc8a4]">{s}</button>)}
+              {suggestions.map((s, i) => <button key={i} onClick={() => handleSuggestion(s)} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-400 transition hover:border-[#00d8f6]/40 hover:bg-[#00d8f6]/10 hover:text-[#00d8f6]">{s}</button>)}
             </div>
           </div>
         </div>}
 
         {messages.map((m, i) => <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-          {m.role === 'ai' && <div className="mr-2 mt-1 grid h-6 w-6 flex-shrink-0 place-items-center rounded-lg bg-[#1fc8a4]/10 text-[10px] text-[#1fc8a4]">✦</div>}
-          <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-[#1fc8a4] text-[#06140f] rounded-br-md' : 'bg-[#12243a] text-slate-200 rounded-bl-md ring-1 ring-white/5'}`}>
+          {m.role === 'ai' && <div className="mr-2 mt-1 grid h-6 w-6 flex-shrink-0 place-items-center rounded-lg bg-[#00d8f6]/10 text-[10px] text-[#00d8f6]">✦</div>}
+          <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-gradient-to-r from-[#00d8f6] to-[#1fc8a4] text-[#020617] rounded-br-md' : 'bg-[#12243a] text-slate-200 rounded-bl-md ring-1 ring-white/5'}`}>
             {m.role === 'user' ? (
               <div className="whitespace-pre-wrap">{m.text}</div>
             ) : (
@@ -100,7 +100,7 @@ export default function ChatWidget() {
                   li: (props) => <li className="mb-0.5" {...props} />,
                   p: (props) => <p className="mb-1.5 last:mb-0" {...props} />,
                   strong: (props) => <strong className="font-bold text-white" {...props} />,
-                  a: (props) => <a className="text-[#1fc8a4] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                  a: (props) => <a className="text-[#00d8f6] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
                   code: ({ className, children, ...props }) => {
                     const match = /language-(\w+)/.exec(className || '')
                     return match ? (
@@ -120,12 +120,12 @@ export default function ChatWidget() {
         </div>)}
 
         {busy && <div className="flex items-start gap-2">
-          <div className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-lg bg-[#1fc8a4]/10 text-[10px] text-[#1fc8a4]">✦</div>
+          <div className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-lg bg-[#00d8f6]/10 text-[10px] text-[#00d8f6]">✦</div>
           <div className="rounded-2xl rounded-bl-md bg-[#12243a] px-4 py-3 ring-1 ring-white/5">
             <div className="flex gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#1fc8a4] animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="h-1.5 w-1.5 rounded-full bg-[#1fc8a4] animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="h-1.5 w-1.5 rounded-full bg-[#1fc8a4] animate-bounce" style={{ animationDelay: '300ms' }} />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00d8f6] animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00d8f6] animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00d8f6] animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         </div>}
@@ -136,8 +136,8 @@ export default function ChatWidget() {
 
       {/* Input */}
       <form onSubmit={send} className="flex items-center gap-2 border-t border-white/10 bg-[#0c1f33] px-4 py-3">
-        <input ref={inputRef} className="flex-1 rounded-lg border border-white/10 bg-[#091725] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-[#1fc8a4] focus:ring-1 focus:ring-[#1fc8a4]/30" maxLength="2000" value={message} onChange={e => setMessage(e.target.value)} placeholder={t('chat.askAnything')} />
-        <button disabled={busy || !message.trim()} className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg bg-[#1fc8a4] text-[#06140f] transition hover:bg-[#4bdfc0] disabled:opacity-40 disabled:cursor-not-allowed">
+        <input ref={inputRef} className="flex-1 rounded-lg border border-white/10 bg-[#091725] px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-[#00d8f6] focus:ring-1 focus:ring-[#00d8f6]/30" maxLength="2000" value={message} onChange={e => setMessage(e.target.value)} placeholder={t('chat.askAnything')} />
+        <button disabled={busy || !message.trim()} className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg bg-gradient-to-r from-[#00d8f6] to-[#1fc8a4] text-[#020617] transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed">
           {busy
             ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
             : <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}

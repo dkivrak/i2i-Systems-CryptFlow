@@ -6,7 +6,7 @@ import { validateTrade } from '../features/trades/tradeValidation'
 import { money } from '../utils/format'
 
 export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOnly = false, changePercent, livePrice, priceStatus, portfolio, onClose, onComplete }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [side, setSide] = useState(initialSide)
   const [quantity, setQuantity] = useState('')
   const [busy, setBusy] = useState(false)
@@ -14,11 +14,31 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
   const [result, setResult] = useState(null)
   const [showApproveStep, setShowApproveStep] = useState(false)
 
-  const contextKey = `${symbol}|${side}|${quantity}|${livePrice}|${priceStatus}`
+  // Price lock logic: 30 seconds price lock on mount
+  const [lockedPrice, setLockedPrice] = useState(null)
+  const [timeLeft, setTimeLeft] = useState(30)
+
+  useEffect(() => {
+    if (lockedPrice === null && livePrice !== undefined && livePrice !== null) {
+      setLockedPrice(Number(livePrice))
+    }
+  }, [livePrice, lockedPrice])
+
+  useEffect(() => {
+    if (timeLeft <= 0) return
+    const interval = setInterval(() => {
+      setTimeLeft(prev => prev - 1)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [timeLeft])
+
+  const activePrice = (timeLeft > 0 && lockedPrice !== null) ? lockedPrice : Number(livePrice)
+
+  const contextKey = `${symbol}|${side}|${quantity}|${activePrice}|${priceStatus}`
   const latestContextRef = useRef(contextKey)
   latestContextRef.current = contextKey
-  const validationError = validateTrade({ quantity, side, symbol, livePrice, priceStatus, portfolio })
-  const numericPrice = Number(livePrice)
+  const validationError = validateTrade({ quantity, side, symbol, livePrice: activePrice, priceStatus, portfolio })
+  const numericPrice = activePrice
   const hasFreshPrice = priceStatus === 'live' && Number.isFinite(numericPrice) && numericPrice > 0
 
   const displayedError = requestError || (quantity !== '' && validationError ? t(validationError) : '')
@@ -26,7 +46,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
   useEffect(() => {
     setRequestError('')
-  }, [symbol, livePrice, priceStatus])
+  }, [symbol, activePrice, priceStatus])
 
   const numericQuantity = parseFloat(quantity) || 0
   const estimatedTotal = numericQuantity * numericPrice
@@ -99,7 +119,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
           <div className="rounded-2xl bg-[#081522] p-5 space-y-3.5 border border-white/5 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-400">{t('trade.receiptType')}</span>
-              <span className={`font-bold px-2 py-0.5 rounded text-xs ${result.side === 'BUY' ? 'bg-[#1fc8a4]/10 text-[#1fc8a4]' : 'bg-rose-500/10 text-rose-400'}`}>
+              <span className={`font-bold px-2 py-0.5 rounded text-xs ${result.side === 'BUY' ? 'bg-[#00d8f6]/10 text-[#00d8f6]' : 'bg-rose-500/10 text-rose-400'}`}>
                 {result.side === 'BUY' ? t('trade.buy') : t('trade.sell')}
               </span>
             </div>
@@ -117,7 +137,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
             </div>
             <div className="flex justify-between border-t border-white/10 pt-3">
               <span className="text-slate-400 font-bold">{t('trade.receiptTotal')}</span>
-              <span className="font-black text-[#1fc8a4]">{money(result.totalUsd)}</span>
+              <span className="font-black text-[#00d8f6]">{money(result.totalUsd)}</span>
             </div>
           </div>
 
@@ -155,7 +175,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
           <div className="rounded-2xl bg-[#081522] p-5 space-y-3.5 border border-white/5 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-400">{t('trade.receiptType')}</span>
-              <span className={`font-bold px-2 py-0.5 rounded text-xs ${side === 'BUY' ? 'bg-[#1fc8a4]/10 text-[#1fc8a4]' : 'bg-rose-500/10 text-rose-400'}`}>
+              <span className={`font-bold px-2 py-0.5 rounded text-xs ${side === 'BUY' ? 'bg-[#00d8f6]/10 text-[#00d8f6]' : 'bg-rose-500/10 text-rose-400'}`}>
                 {side === 'BUY' ? t('trade.buy') : t('trade.sell')}
               </span>
             </div>
@@ -169,7 +189,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
             </div>
             <div className="flex justify-between border-t border-white/10 pt-3">
               <span className="text-slate-400 font-bold">{t('trade.receiptTotal')}</span>
-              <span className="font-black text-[#1fc8a4]">{money(estimatedTotal)}</span>
+              <span className="font-black text-[#00d8f6]">{money(estimatedTotal)}</span>
             </div>
           </div>
 
@@ -221,7 +241,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
             <button
               type="button"
               onClick={() => changeSide('BUY')}
-              className={`rounded-lg py-3 font-bold transition-all ${side === 'BUY' ? 'bg-[#1fc8a4] text-[#06140f]' : 'text-slate-400'} hover:opacity-90`}
+              className={`rounded-lg py-3 font-bold transition-all ${side === 'BUY' ? 'bg-gradient-to-r from-[#00d8f6] to-[#1fc8a4] text-[#020617]' : 'text-slate-400'} hover:opacity-90`}
             >
               {t('trade.buy')}
             </button>
@@ -241,20 +261,33 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
         <form onSubmit={handleFormSubmit} className="mt-6">
           <label htmlFor="trade-quantity" className="text-sm text-slate-300">{t('trade.coinQuantity')}</label>
-          <div className="mt-2 text-sm text-slate-400 flex items-center gap-2">
-            {hasFreshPrice ? (
-              <>
-                <span>{t('trade.livePrice')}: <span className="text-white font-bold">{money(numericPrice)}</span></span>
-                {changePercent !== undefined && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                    changePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                  }`}>
-                    {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
-                  </span>
-                )}
-              </>
-            ) : (
-              t(unavailablePriceMessage)
+          <div className="mt-2 text-sm text-slate-400 flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              {hasFreshPrice ? (
+                <>
+                  <span>{timeLeft > 0 && lockedPrice !== null ? t('trade.lockedPrice') : t('trade.livePrice')}: <span className="text-white font-bold">{money(numericPrice)}</span></span>
+                  {changePercent !== undefined && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      changePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                    }`}>
+                      {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+                    </span>
+                  )}
+                </>
+              ) : (
+                t(unavailablePriceMessage)
+              )}
+            </div>
+            {timeLeft > 0 && lockedPrice !== null && (
+              <p className="text-[11px] text-[#00d8f6] font-medium flex items-center gap-1.5 mt-0.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00d8f6] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#00d8f6]"></span>
+                </span>
+                {i18n.language?.startsWith('tr')
+                  ? `Fiyat 30 saniyeliğine kilitlendi. Geri sayım: ${timeLeft}s`
+                  : `Price locked for 30s. Countdown: ${timeLeft}s`}
+              </p>
             )}
           </div>
           <div className="relative mt-2">
@@ -276,7 +309,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
           {numericQuantity > 0 && (
             <div className="mt-3 flex items-center justify-between rounded-xl bg-[#0c1a2a] px-4 py-3">
               <span className="text-xs text-slate-500">{t('trade.estimatedTotal')}</span>
-              <span className={`font-bold ${side === 'BUY' ? 'text-[#1fc8a4]' : 'text-rose-400'}`}>{money(estimatedTotal)}</span>
+              <span className={`font-bold ${side === 'BUY' ? 'text-[#00d8f6]' : 'text-rose-400'}`}>{money(estimatedTotal)}</span>
             </div>
           )}
 
@@ -291,8 +324,12 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
           {displayedError && <p role="alert" className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{displayedError}</p>}
           
-          <button disabled={busy || Boolean(validationError)} className="btn btn-primary mt-6 w-full disabled:opacity-50 disabled:cursor-not-allowed">
-            {busy ? t('trade.processingOrder') : t('trade.executeOrder')}
+          <button disabled={busy || Boolean(validationError) || timeLeft <= 0} className="btn btn-primary mt-6 w-full disabled:opacity-50 disabled:cursor-not-allowed">
+            {busy 
+              ? t('trade.processingOrder') 
+              : timeLeft <= 0 
+                ? (i18n.language?.startsWith('tr') ? 'Süre Doldu (Fiyat Kilidi Geçersiz)' : 'Time Expired (Price Lock Invalid)')
+                : t('trade.executeOrder')}
           </button>
         </form>
       </div>

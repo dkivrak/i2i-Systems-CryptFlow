@@ -50,15 +50,14 @@ export default function AuthPage({ onAuth }) {
     <main className="grid-lines min-h-screen grid lg:grid-cols-[1.15fr_.85fr]">
       {/* Left Panel */}
       <section className="hidden lg:flex flex-col justify-between p-14 border-r border-white/10">
-        <div className="flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full bg-[#1fc8a4] shadow-[0_0_20px_#1fc8a4]" />
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="CryptFlow Logo" className="h-12 w-12 object-contain" />
           <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
         </div>
         <div className="mt-8 mb-auto">
-          <p className="label mb-5">{t('auth.paperMarketLab')}</p>
-          <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em]">
+          <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em] text-slate-100">
             {t('auth.moveWithMarket')}<br />
-            <span className="text-[#1fc8a4]">{t('auth.learnWithoutRisk')}</span>
+            <span className="text-gradient">{t('auth.learnWithoutRisk')}</span>
           </h1>
           <p className="mt-7 max-w-lg text-lg leading-8 text-slate-400">
             {t('auth.heroDescription')}
@@ -108,8 +107,9 @@ export default function AuthPage({ onAuth }) {
       {/* Right Panel */}
       <section className="flex items-center justify-center p-6">
         <div className="card w-full max-w-md rounded-3xl p-7 sm:p-10">
-          <div className="mb-8 lg:hidden font-black">
-            CRYPT<span className="text-[#1fc8a4]">FLOW</span>
+          <div className="mb-8 lg:hidden flex items-center gap-2 font-black text-xl">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-8 w-8 object-contain" />
+            <span className="text-gradient">CRYPTFLOW</span>
           </div>
 
           <p className="label">
