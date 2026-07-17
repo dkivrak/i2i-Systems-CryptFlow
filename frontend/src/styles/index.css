@@ -184,3 +184,21 @@ button, input {
 .animate-slide-right {
   animation: slide-in-right 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Infinite Marquee Ticker Animation */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}

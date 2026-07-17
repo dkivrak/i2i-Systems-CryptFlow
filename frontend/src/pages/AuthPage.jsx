@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, token } from '../api/client';
@@ -13,7 +13,18 @@ export default function AuthPage({ onAuth }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [randomSymbols, setRandomSymbols] = useState([]);
   const { market, changes } = useMarketStream();
+
+  useEffect(() => {
+    if (randomSymbols.length === 0 && market?.prices) {
+      const allSymbols = Object.keys(market.prices);
+      if (allSymbols.length > 0) {
+        const shuffled = [...allSymbols].sort(() => 0.5 - Math.random());
+        setRandomSymbols(shuffled.slice(0, 9));
+      }
+    }
+  }, [market, randomSymbols]);
 
   async function submit(e) {
     e.preventDefault();
@@ -45,35 +56,12 @@ export default function AuthPage({ onAuth }) {
       setBusy(false);
     }
   }
-  const COIN_NAMES = {
-    BTC: 'Bitcoin',
-    ETH: 'Ethereum',
-    SOL: 'Solana',
-    BNB: 'Binance Coin',
-    ADA: 'Cardano',
-    XRP: 'Ripple',
-    DOGE: 'Dogecoin',
-    DOT: 'Polkadot',
-    AVAX: 'Avalanche',
-    LINK: 'Chainlink'
-  };
-
   const displayCoins = (() => {
-    const sorted = Object.keys(changes || {})
-      .map(symbol => ({
-        symbol,
-        absChange: Math.abs(changes[symbol] || 0),
-        change: changes[symbol] || 0,
-        price: market?.prices?.[symbol]
-      }))
-      .filter(item => item.price !== undefined && item.price !== null)
-      .sort((a, b) => b.absChange - a.absChange);
+    const activeList = randomSymbols.length > 0
+      ? randomSymbols
+      : ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX'];
 
-    if (sorted.length >= 3) {
-      return sorted.slice(0, 3);
-    }
-
-    return ['BTC', 'ETH', 'SOL'].map(symbol => ({
+    return activeList.map(symbol => ({
       symbol,
       change: changes?.[symbol] || 0,
       price: market?.prices?.[symbol]
@@ -98,48 +86,73 @@ export default function AuthPage({ onAuth }) {
           </p>
 
           {/* Live Market Tickers */}
-          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/60 p-5 border border-white/5 space-y-4 overflow-hidden">
-            {displayCoins.map((item, idx) => {
-              const symbol = item.symbol;
-              const price = item.price;
-              const change = item.change;
-              const coinName = COIN_NAMES[symbol] || symbol;
-              const colorClass = [
-                'bg-amber-400/20 text-amber-300 border border-amber-500/20',
-                'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
-                'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
-              ][idx] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
+          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/40 p-1 border border-white/5 overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_15%,white_85%,transparent)]">
+            <div className="animate-marquee flex gap-4 py-3">
+              {displayCoins.map((item, idx) => {
+                const symbol = item.symbol;
+                const price = item.price;
+                const change = item.change;
+                const colorClass = [
+                  'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                  'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+                ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
 
-              return (
-                <div
-                  key={symbol}
-                  className="flex items-center justify-between text-sm animate-slide-right"
-                  style={{ animationDelay: `${idx * 100}ms` }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs ${colorClass}`}>
+                return (
+                  <div
+                    key={`${symbol}-1`}
+                    className="flex items-center gap-3 bg-[#0a1424]/80 border border-white/5 rounded-2xl px-4 py-2.5 backdrop-blur-md min-w-[145px]"
+                  >
+                    <span className={`grid h-7 w-7 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
                       {symbol[0]}
                     </span>
                     <div>
-                      <span className="font-bold text-white block">{symbol}</span>
-                      <span className="text-[10px] text-slate-500 block">{coinName}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white text-xs">{symbol}</span>
+                        {change !== undefined && (
+                          <span className={`text-[10px] font-black ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
+                            {change >= 0 ? '+' : ''}{change.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-white/70 block mt-0.5">{price ? money(price) : '...'}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold text-white block">
-                      {price ? money(price) : '...'}
+                );
+              })}
+              {displayCoins.map((item, idx) => {
+                const symbol = item.symbol;
+                const price = item.price;
+                const change = item.change;
+                const colorClass = [
+                  'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                  'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+                ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
+
+                return (
+                  <div
+                    key={`${symbol}-2`}
+                    className="flex items-center gap-3 bg-[#0a1424]/80 border border-white/5 rounded-2xl px-4 py-2.5 backdrop-blur-md min-w-[145px]"
+                  >
+                    <span className={`grid h-7 w-7 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
+                      {symbol[0]}
                     </span>
-                    {change !== undefined && (
-                      <span className={`text-xs font-bold block ${
-                        change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
-                      }`}>
-                        {change >= 0 ? '+' : ''}{change.toFixed(2)}%
-                      </span>
-                    )}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white text-xs">{symbol}</span>
+                        {change !== undefined && (
+                          <span className={`text-[10px] font-black ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
+                            {change >= 0 ? '+' : ''}{change.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-white/70 block mt-0.5">{price ? money(price) : '...'}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
         <p className="text-sm text-slate-600 mt-6">
