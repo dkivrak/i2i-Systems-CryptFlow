@@ -94,12 +94,12 @@ export default function AuthPage({ onAuth }) {
             {t('auth.moveWithMarket')}<br />
             <span className="text-gradient">{t('auth.learnWithoutRisk')}</span>
           </h1>
-          <p className="mt-7 max-w-lg text-lg leading-8 text-slate-400">
+          <p className="mt-4 max-w-lg text-lg leading-8 text-slate-400">
             {t('auth.heroDescription')}
           </p>
 
           {/* Live Market Tickers */}
-          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/40 p-3 border border-white/5 overflow-hidden h-[300px] relative [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]">
+          <div className="mt-5 max-w-md rounded-2xl bg-[#081522]/40 p-3 border border-white/5 overflow-hidden h-[300px] relative [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]">
             <div className="animate-marquee-vertical flex flex-col gap-4 py-1">
               {displayCoins.map((item, idx) => {
                 const symbol = item.symbol;
