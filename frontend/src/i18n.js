@@ -19,7 +19,7 @@ const resources = {
         paperMarketLab: 'PAPER MARKET LAB',
         moveWithMarket: 'Move with the market.',
         learnWithoutRisk: 'Learn without the risk.',
-        heroDescription: 'Trade BTC, ETH, and SOL virtual assets. Monitor the live stream, backtest your portfolio, and receive context-aware AI insights.',
+        heroDescription: 'Trade top cryptocurrencies and virtual assets. Monitor the live stream, backtest your portfolio, and receive context-aware AI insights.',
         disclaimer: 'Educational purposes only — not financial advice.',
         welcomeBack: 'WELCOME BACK',
         startYourLab: 'START YOUR LAB',
@@ -69,7 +69,20 @@ const resources = {
         colPrice: 'Price',
         colTotal: 'Total',
         colTime: 'Time',
-        noTransactions: 'No transactions yet.'
+        noTransactions: 'No transactions yet.',
+        notifications: 'Notifications',
+        close: 'Close',
+        dailySummaryTitle: 'Daily AI Summary',
+        goToPortfolio: 'Go to Portfolio',
+        noNotifications: 'No new notifications.',
+        totalCoinValue: 'Total Crypto Value',
+        totalCoinValueDesc: 'Total estimated value of your cryptocurrency holdings.',
+        pageInfo: 'Showing: {{start}}-{{end}} / Total: {{total}}',
+        prevPage: 'Previous',
+        nextPage: 'Next',
+        hoverChart: 'Inspect Allocation',
+        hoverDesc: 'Hover over segments to view details.',
+        allocation: 'allocation'
       },
 
       // --- Chat Widget ---
@@ -112,9 +125,22 @@ const resources = {
         insufficientUsd: 'Insufficient USD balance for this transaction.',
         insufficientAssetSimple: 'Insufficient asset balance for sale.',
         invalidAmount: 'Quantity must be positive with at most 8 decimal places.',
+        minimumOrderValue: 'Total order value must be at least $0.01.',
         livePrice: 'Live Price',
         processingOrder: 'Processing order...',
-        executeOrder: 'Execute Order'
+        executeOrder: 'Execute Order',
+        successTitle: 'Transaction Successful!',
+        receiptDesc: 'Your transaction has been processed securely.',
+        receiptType: 'Transaction Type',
+        receiptAsset: 'Asset',
+        receiptQuantity: 'Quantity',
+        receiptPrice: 'Unit Price',
+        receiptTotal: 'Total Amount',
+        closeReceipt: 'Done',
+        confirmTitle: 'Order Confirmation',
+        confirmDesc: 'Please confirm the transaction details below.',
+        approveOrder: 'Yes, Approve',
+        backToEdit: 'Go Back'
       },
 
       // --- Profile Modal ---
@@ -138,7 +164,14 @@ const resources = {
         updatePassword: 'Update Password',
         atLeastChars: 'At least 8 characters',
         confirmYourPassword: 'Confirm your new password',
-        unknown: 'Unknown'
+        unknown: 'Unknown',
+        dangerZone: 'DANGER ZONE',
+        deleteAccountDesc: 'Permanently deleting your account will remove all transaction history and wallet balances. This action is irreversible.',
+        areYouSure: 'Are you sure? This cannot be undone.',
+        deleting: 'Deleting...',
+        yesDelete: 'Yes, Delete My Account',
+        cancel: 'Cancel',
+        deleteAccount: 'Permanently Delete Account'
       }
     }
   },
@@ -150,7 +183,7 @@ const resources = {
         paperMarketLab: 'KAĞIT PİYASA LABORATUVARI',
         moveWithMarket: 'Piyasa ile hareket et.',
         learnWithoutRisk: 'Risk almadan öğren.',
-        heroDescription: 'BTC, ETH ve SOL sanal varlıklarıyla işlem yapın. Canlı akışı izleyin, portföyünüzü test edin ve yapay zeka destekli analizler alın.',
+        heroDescription: 'En popüler kripto para ve sanal varlıklarla işlem yapın. Canlı akışı izleyin, portföyünüzü test edin ve yapay zeka destekli analizler alın.',
         disclaimer: 'Yalnızca eğitim amaçlıdır — finansal tavsiye değildir.',
         welcomeBack: 'HOŞ GELDİNİZ',
         startYourLab: 'LABORATUVARINIZI KURUN',
@@ -200,7 +233,20 @@ const resources = {
         colPrice: 'Fiyat',
         colTotal: 'Toplam',
         colTime: 'Zaman',
-        noTransactions: 'Henüz işlem yok.'
+        noTransactions: 'Henüz işlem yok.',
+        notifications: 'Bildirimler',
+        close: 'Kapat',
+        dailySummaryTitle: 'Günlük Yapay Zeka Özeti',
+        goToPortfolio: 'Portföye Git',
+        noNotifications: 'Yeni bildirim yok.',
+        totalCoinValue: 'Sahip Olunan Kripto Değeri',
+        totalCoinValueDesc: 'Sahip olduğunuz kripto varlıkların toplam tahmini değeri.',
+        pageInfo: 'Gösterilen: {{start}}-{{end}} / Toplam: {{total}}',
+        prevPage: 'Geri',
+        nextPage: 'İleri',
+        hoverChart: 'Dağılımı İncele',
+        hoverDesc: 'Grafik dilimlerinin üzerine gelerek detayları görün.',
+        allocation: 'oranında'
       },
 
       // --- Chat Widget ---
@@ -243,9 +289,22 @@ const resources = {
         insufficientUsd: 'Bu işlem için yeterli USD bakiyeniz yok.',
         insufficientAssetSimple: 'Satış için yeterli varlık bakiyeniz yok.',
         invalidAmount: 'Miktar en fazla 8 ondalık basamaklı pozitif bir sayı olmalıdır.',
+        minimumOrderValue: 'Toplam işlem tutarı en az $0.01 olmalıdır.',
         livePrice: 'Canlı Fiyat',
         processingOrder: 'Emir işleniyor...',
-        executeOrder: 'Emri Gerçekleştir'
+        executeOrder: 'Emri Gerçekleştir',
+        successTitle: 'İşlem Başarılı!',
+        receiptDesc: 'İşleminiz güvenli bir şekilde gerçekleştirildi.',
+        receiptType: 'İşlem Tipi',
+        receiptAsset: 'Varlık',
+        receiptQuantity: 'Miktar',
+        receiptPrice: 'Birim Fiyat',
+        receiptTotal: 'Toplam Tutar',
+        closeReceipt: 'Tamam',
+        confirmTitle: 'İşlem Onayı',
+        confirmDesc: 'Lütfen aşağıdaki işlem detaylarını onaylayın.',
+        approveOrder: 'Evet, Onayla',
+        backToEdit: 'Geri Dön'
       },
 
       // --- Profile Modal ---
@@ -269,7 +328,14 @@ const resources = {
         updatePassword: 'Şifreyi Güncelle',
         atLeastChars: 'En az 8 karakter',
         confirmYourPassword: 'Yeni şifrenizi onaylayın',
-        unknown: 'Bilinmiyor'
+        unknown: 'Bilinmiyor',
+        dangerZone: 'TEHLİKELİ BÖLGE',
+        deleteAccountDesc: 'Hesabınızı kalıcı olarak sildiğinizde, tüm işlem geçmişiniz ve cüzdan bakiyeniz geri döndürülemeyecek şekilde silinecektir.',
+        areYouSure: 'Emin misiniz? Bu işlem geri alınamaz.',
+        deleting: 'Siliniyor...',
+        yesDelete: 'Evet, Hesabımı Sil',
+        cancel: 'Vazgeç',
+        deleteAccount: 'Hesabı Kalıcı Olarak Sil'
       }
     }
   }

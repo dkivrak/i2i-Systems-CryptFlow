@@ -26,9 +26,9 @@ public class PortfolioController {
     var prices = market.getCurrent().prices();
     var items = assets.findByWalletIdOrderBySymbol(wallet.getId()).stream()
         .map(a -> {
-          var price = prices.get(a.getSymbol().name());
+          var price = prices.get(a.getSymbol());
           return new AssetItem(
-              a.getSymbol().name(),
+              a.getSymbol(),
               a.getQuantity(),
               price,
               a.getQuantity().multiply(price).setScale(2, RoundingMode.HALF_UP));

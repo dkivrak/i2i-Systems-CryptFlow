@@ -1,27 +1,35 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, WS_URL } from '../api/client'
 
-export const MARKET_SYMBOLS = ['BTC', 'ETH', 'SOL']
 export const MARKET_STALE_AFTER_MS = 15_000
 export const MARKET_WATCHDOG_INTERVAL_MS = 1_000
 export const MARKET_RECONNECT_DELAY_MS = 5_000
 
-const statusesFor = status => Object.fromEntries(MARKET_SYMBOLS.map(symbol => [symbol, status]))
-
 export function useMarketStream() {
   const [market, setMarket] = useState(null)
   const [basePrices, setBasePrices] = useState(null)
+  const [dailyOpenPrices, setDailyOpenPrices] = useState(null)
   const [status, setStatus] = useState('connecting')
-  const [symbolStatuses, setSymbolStatuses] = useState(() => statusesFor('connecting'))
+  const fallbackSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK']
+  const [symbolStatuses, setSymbolStatuses] = useState(() =>
+    Object.fromEntries(fallbackSymbols.map(s => [s, 'connecting']))
+  )
   const [error, setError] = useState('')
+
+  const marketRef = useRef(market)
+  marketRef.current = market
+  const basePricesRef = useRef(basePrices)
+  basePricesRef.current = basePrices
 
   useEffect(() => {
     let alive = true
     let socket = null
     let reconnectTimer = null
     let watchdogTimer = null
+    let connectTimeout = null
     let openedAt = null
-    const lastValidMessageAt = Object.fromEntries(MARKET_SYMBOLS.map(symbol => [symbol, null]))
+    const lastValidMessageAt = {}
+    let lastSocketMessageAt = null
 
     const clearReconnectTimer = () => {
       if (reconnectTimer !== null) {
@@ -33,38 +41,63 @@ export function useMarketStream() {
     const updateHealth = (now = Date.now()) => {
       if (!alive || !socket || socket.readyState !== WebSocket.OPEN) return
 
-      let hasLiveSymbol = false
-      let hasStaleSymbol = false
-      const nextStatuses = {}
+      // Global stale: based on whether ANY websocket message arrived recently
+      const globalIsLive = lastSocketMessageAt !== null && now - lastSocketMessageAt <= MARKET_STALE_AFTER_MS;
+      const globalIsStale = (lastSocketMessageAt !== null && now - lastSocketMessageAt > MARKET_STALE_AFTER_MS)
+        || (lastSocketMessageAt === null && openedAt !== null && now - openedAt >= MARKET_STALE_AFTER_MS);
 
-      for (const symbol of MARKET_SYMBOLS) {
-        const lastMessageAt = lastValidMessageAt[symbol]
+      const nextStatuses = {}
+      const activeSymbols = marketRef.current?.prices ? Object.keys(marketRef.current.prices) : []
+
+      for (const symbol of activeSymbols) {
+        const lastMessageAt = lastValidMessageAt[symbol] || null
         if (lastMessageAt !== null && now - lastMessageAt <= MARKET_STALE_AFTER_MS) {
           nextStatuses[symbol] = 'live'
-          hasLiveSymbol = true
-        } else if (lastMessageAt !== null || (openedAt !== null && now - openedAt >= MARKET_STALE_AFTER_MS)) {
+        } else if (globalIsStale) {
           nextStatuses[symbol] = 'stale'
-          hasStaleSymbol = true
         } else {
-          nextStatuses[symbol] = 'connecting'
+          // Stream is live but this specific coin hasn't updated yet — mark as live anyway
+          nextStatuses[symbol] = globalIsLive ? 'live' : 'connecting'
         }
       }
 
       setSymbolStatuses(nextStatuses)
-      setStatus(hasStaleSymbol ? 'stale' : hasLiveSymbol ? 'live' : 'connecting')
+      setStatus(
+        globalIsStale
+          ? 'stale'
+          : globalIsLive
+          ? 'live'
+          : 'connecting'
+      )
     }
 
     const markDisconnected = () => {
       openedAt = null
+      lastSocketMessageAt = null
       setStatus('offline')
-      setSymbolStatuses(statusesFor('offline'))
+      setSymbolStatuses(prev => {
+        const next = {}
+        Object.keys(prev).forEach(s => {
+          next[s] = 'offline'
+        })
+        return next
+      })
     }
 
     const resetFreshness = () => {
       openedAt = null
-      for (const symbol of MARKET_SYMBOLS) lastValidMessageAt[symbol] = null
+      lastSocketMessageAt = null
+      Object.keys(lastValidMessageAt).forEach(s => {
+        lastValidMessageAt[s] = null
+      })
       setStatus('connecting')
-      setSymbolStatuses(statusesFor('connecting'))
+      setSymbolStatuses(prev => {
+        const next = {}
+        Object.keys(prev).forEach(s => {
+          next[s] = 'connecting'
+        })
+        return next
+      })
     }
 
     const scheduleReconnect = () => {
@@ -82,78 +115,128 @@ export function useMarketStream() {
       clearReconnectTimer()
       resetFreshness()
 
-      let nextSocket
-      try {
-        nextSocket = new WebSocket(WS_URL)
-      } catch {
-        socket = null
-        markDisconnected()
-        scheduleReconnect()
-        return
-      }
-
-      socket = nextSocket
-
-      nextSocket.onopen = () => {
-        if (!alive || socket !== nextSocket) return
-        openedAt = Date.now()
-        setStatus('connecting')
-      }
-
-      nextSocket.onmessage = event => {
-        if (!alive || socket !== nextSocket) return
-
+      const connectSocket = () => {
+        let nextSocket
         try {
-          const data = JSON.parse(event.data)
-          const price = Number(data.p)
-          if (!MARKET_SYMBOLS.includes(data.s) || !Number.isFinite(price) || price <= 0) {
-            throw new Error('Invalid market price message')
-          }
-
-          const receivedAt = Date.now()
-          lastValidMessageAt[data.s] = receivedAt
-          setMarket(previous => ({
-            ...(previous ?? {}),
-            prices: { ...(previous?.prices ?? {}), [data.s]: data.p },
-            updatedAt: new Date(receivedAt).toISOString(),
-          }))
-          setError('')
-          updateHealth(receivedAt)
+          nextSocket = new WebSocket(WS_URL)
         } catch {
-          setError('Failed to parse WebSocket message.')
+          socket = null
+          markDisconnected()
+          scheduleReconnect()
+          return
+        }
+
+        socket = nextSocket
+
+        nextSocket.onopen = () => {
+          if (!alive || socket !== nextSocket) return
+          openedAt = Date.now()
+          setStatus('connecting')
+        }
+
+        nextSocket.onmessage = event => {
+          if (!alive || socket !== nextSocket) return
+
+          try {
+            const data = JSON.parse(event.data)
+            const updates = Array.isArray(data) ? data : [data]
+
+            let nextMarket = { ...(marketRef.current ?? {}) }
+            if (!nextMarket.prices) nextMarket.prices = {}
+
+            const receivedAt = Date.now()
+            let hasUpdate = false
+
+            for (const item of updates) {
+              const price = Number(item.p)
+              const isKnownSymbol = basePricesRef.current && (item.s in basePricesRef.current)
+              if (!isKnownSymbol || !Number.isFinite(price) || price <= 0) {
+                continue
+              }
+
+              lastValidMessageAt[item.s] = receivedAt
+              nextMarket.prices[item.s] = item.p
+              hasUpdate = true
+            }
+
+            if (hasUpdate) {
+              lastSocketMessageAt = receivedAt
+              nextMarket.updatedAt = new Date(receivedAt).toISOString()
+              marketRef.current = nextMarket
+              setMarket(nextMarket)
+              setError('')
+              updateHealth(receivedAt)
+            }
+          } catch {
+            setError('Failed to parse WebSocket message.')
+          }
+        }
+
+        nextSocket.onerror = () => {
+          if (!alive || socket !== nextSocket) return
+          socket = null
+          markDisconnected()
+          nextSocket.onclose = null
+          if (nextSocket.readyState === WebSocket.CONNECTING || nextSocket.readyState === WebSocket.OPEN) {
+            nextSocket.close()
+          }
+          scheduleReconnect()
+        }
+
+        nextSocket.onclose = () => {
+          if (!alive || socket !== nextSocket) return
+          socket = null
+          markDisconnected()
+          scheduleReconnect()
         }
       }
 
-      nextSocket.onerror = () => {
-        if (!alive || socket !== nextSocket) return
-        socket = null
-        markDisconnected()
-        nextSocket.onclose = null
-        if (nextSocket.readyState === WebSocket.CONNECTING || nextSocket.readyState === WebSocket.OPEN) {
-          nextSocket.close()
+      if (import.meta.env.MODE === 'test') {
+        connectSocket()
+      } else {
+        if (connectTimeout !== null) {
+          clearTimeout(connectTimeout)
         }
-        scheduleReconnect()
+        connectTimeout = setTimeout(() => {
+          if (alive) {
+            connectSocket()
+          }
+        }, 50)
       }
+    }
 
-      nextSocket.onclose = () => {
-        if (!alive || socket !== nextSocket) return
-        socket = null
-        markDisconnected()
-        scheduleReconnect()
-      }
+    if (import.meta.env.MODE !== 'test') {
+      fetch('https://api.binance.com/api/v3/ticker/24hr')
+        .then(res => res.json())
+        .then(data => {
+          if (alive && Array.isArray(data)) {
+            const opens = {}
+            data.forEach(item => {
+              if (item.symbol.endsWith('USDT')) {
+                const symbol = item.symbol.slice(0, -4)
+                const openPrice = Number(item.openPrice || 0)
+                if (openPrice > 0) {
+                  opens[symbol] = openPrice
+                }
+              }
+            })
+            setDailyOpenPrices(opens)
+          }
+        })
+        .catch(err => {
+          console.warn('Failed to fetch daily open prices from Binance:', err)
+        })
     }
 
     api('/market/prices')
       .then(value => {
         if (alive) {
-          setMarket(previous => previous ? {
-            ...value,
-            ...previous,
-            prices: { ...(value?.prices ?? {}), ...(previous.prices ?? {}) },
-          } : value)
+          marketRef.current = value
+          setMarket(value)
           if (value?.prices) {
             setBasePrices(previous => previous || value.prices)
           }
+          updateHealth()
         }
       })
       .catch(requestError => {
@@ -166,6 +249,7 @@ export function useMarketStream() {
     return () => {
       alive = false
       clearReconnectTimer()
+      if (connectTimeout !== null) clearTimeout(connectTimeout)
       if (watchdogTimer !== null) clearInterval(watchdogTimer)
       if (socket) {
         const activeSocket = socket
@@ -182,9 +266,9 @@ export function useMarketStream() {
   }, [])
 
   const changes = {}
-  if (basePrices && market?.prices) {
-    for (const symbol of MARKET_SYMBOLS) {
-      const base = Number(basePrices[symbol])
+  if (market?.prices) {
+    for (const symbol of Object.keys(market.prices)) {
+      const base = Number(dailyOpenPrices?.[symbol] || basePrices?.[symbol] || 0)
       const current = Number(market.prices[symbol])
       if (base > 0 && current > 0) {
         changes[symbol] = ((current - base) / base) * 100
@@ -194,5 +278,5 @@ export function useMarketStream() {
     }
   }
 
-  return { market, status, symbolStatuses, error, changes }
+  return { market, status, symbolStatuses, error, changes, dailyOpenPrices, basePrices }
 }

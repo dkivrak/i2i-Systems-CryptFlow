@@ -1,6 +1,5 @@
 package com.i2i.cryptflow.portfolio;
 
-import com.i2i.cryptflow.shared.model.AssetSymbol;
 import com.i2i.cryptflow.wallet.Wallet;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -11,13 +10,12 @@ import java.util.UUID;
 public class PortfolioAsset {
   @Id private UUID id;
   @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="wallet_id") private Wallet wallet;
-  @Enumerated(EnumType.STRING) @Column(nullable=false, length=10) private AssetSymbol symbol;
+  @Column(nullable=false, length=10) private String symbol;
   @Column(nullable=false, precision=28, scale=8) private BigDecimal quantity;
   @Column(name="created_at", nullable=false) private Instant createdAt;
   @Column(name="updated_at", nullable=false) private Instant updatedAt;
   protected PortfolioAsset() {}
-  public PortfolioAsset(Wallet wallet, AssetSymbol symbol){id=UUID.randomUUID();this.wallet=wallet;this.symbol=symbol;quantity=BigDecimal.ZERO.setScale(8);createdAt=Instant.now();updatedAt=createdAt;}
-  public AssetSymbol getSymbol(){return symbol;} public BigDecimal getQuantity(){return quantity;}
+  public PortfolioAsset(Wallet wallet, String symbol){id=UUID.randomUUID();this.wallet=wallet;this.symbol=symbol;quantity=BigDecimal.ZERO.setScale(8);createdAt=Instant.now();updatedAt=createdAt;}
+  public String getSymbol(){return symbol;} public BigDecimal getQuantity(){return quantity;}
   public void setQuantity(BigDecimal value){quantity=value;updatedAt=Instant.now();}
 }
-

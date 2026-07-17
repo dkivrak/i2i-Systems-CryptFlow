@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../api/client';
+import { api, token } from '../api/client';
 import { changeAppLanguage } from '../utils/language';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-export default function ProfileModal({ me, onClose }) {
+export default function ProfileModal({ me, onClose, onLogout }) {
   const { t, i18n } = useTranslation();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -13,6 +13,7 @@ export default function ProfileModal({ me, onClose }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const lang = i18n.language;
 
@@ -63,6 +64,22 @@ export default function ProfileModal({ me, onClose }) {
     } catch (err) {
       setError(err.message || t('profile.passwordUpdateError'));
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setBusy(true);
+    setError('');
+    setSuccess('');
+    try {
+      await api('/me', { method: 'DELETE' });
+      token.clear();
+      sessionStorage.clear();
+      onClose();
+      onLogout();
+    } catch (err) {
+      setError(err.message || 'Failed to delete account');
       setBusy(false);
     }
   }
@@ -124,6 +141,49 @@ export default function ProfileModal({ me, onClose }) {
                 <option value="en">English (EN)</option>
                 <option value="tr">Türkçe (TR)</option>
               </select>
+            </div>
+
+            {/* Delete Account */}
+            <div className="pt-4 border-t border-white/10 space-y-3">
+              <p className="label text-[10px] text-rose-400 tracking-wider font-bold">
+                {t('profile.dangerZone')}
+              </p>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {t('profile.deleteAccountDesc')}
+              </p>
+              {showConfirmDelete ? (
+                <div className="space-y-2 rounded-2xl bg-red-500/10 p-4 border border-red-500/20">
+                  <p className="text-xs text-red-300 font-bold">
+                    {t('profile.areYouSure')}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={busy}
+                      className="btn bg-red-600 hover:bg-red-700 text-white flex-1 py-1.5 text-xs font-bold transition"
+                    >
+                      {busy ? t('profile.deleting') : t('profile.yesDelete')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmDelete(false)}
+                      disabled={busy}
+                      className="btn bg-white/10 hover:bg-white/20 text-white flex-1 py-1.5 text-xs font-bold transition"
+                    >
+                      {t('profile.cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="btn bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-400 w-full py-2.5 font-bold transition"
+                >
+                  {t('profile.deleteAccount')}
+                </button>
+              )}
             </div>
           </div>
 

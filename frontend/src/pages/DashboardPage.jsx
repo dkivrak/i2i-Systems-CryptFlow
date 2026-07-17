@@ -7,23 +7,121 @@ import ProfileModal from '../components/ProfileModal';
 import { money, coin } from '../utils/format';
 import { changeAppLanguage } from '../utils/language';
 
-const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL'];
+const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK'];
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
-  const { market, status, symbolStatuses, error: marketError, changes } = useMarketStream();
+  const { market, status, symbolStatuses, error: marketError, changes, dailyOpenPrices, basePrices } = useMarketStream();
 
   const [me, setMe] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
   const [trades, setTrades] = useState([]);
-  const [tab, setTab] = useState('market');
+  const [tab, setTab] = useState(() => {
+    try {
+      return sessionStorage.getItem('cryptflow_active_tab') || 'market';
+    } catch {
+      return 'market';
+    }
+  });
   const [modal, setModal] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
+  const [dailySummary, setDailySummary] = useState('');
+
+  const [showFavoritesDropdown, setShowFavoritesDropdown] = useState(false);
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cryptflow_favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('cryptflow_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (symbol) => {
+    setFavorites(prev =>
+      prev.includes(symbol)
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol]
+    );
+  };
+
+  const toggleFavoritesDropdown = () => {
+    setShowFavoritesDropdown(prev => !prev);
+    setShowNotifications(false);
+  };
 
   const currentLang = i18n.language;
+
+  useEffect(() => {
+    const cachedSummary = localStorage.getItem('cryptflow_daily_summary');
+    const cachedTime = localStorage.getItem('cryptflow_daily_summary_time');
+    const cachedLang = localStorage.getItem('cryptflow_daily_summary_lang');
+    const lastReadTime = localStorage.getItem('cryptflow_daily_summary_read_time');
+
+    const fetchDailySummary = async () => {
+      try {
+        const prompt = currentLang === 'tr'
+          ? "Lütfen portföyümün genel durumunu ve piyasadaki son trendleri (BTC, ETH, SOL) analiz eden, en fazla 2-3 cümlelik çok kısa, Türkçe, bilgilendirici ve heyecan verici bir günlük özet yaz. (Yanıtın sadece bu özet olsun, yasal uyarı veya disclaimer ekleme)."
+          : "Please write a very short daily summary and advice analyzing the general status of my portfolio and the recent trends in the market (BTC, ETH, SOL), in at most 2-3 sentences, in English, informative and exciting. (Your response must only contain this summary, do not add legal warnings or disclaimers).";
+
+        const response = await api('/chat/query', {
+          method: 'POST',
+          body: JSON.stringify({ message: prompt })
+        });
+        if (response?.answer) {
+          const cleanAnswer = response.answer.replace(/Yasal Uyarı|Disclaimer[\s\S]*$/gi, '').trim();
+          localStorage.setItem('cryptflow_daily_summary', cleanAnswer);
+          localStorage.setItem('cryptflow_daily_summary_time', Date.now().toString());
+          localStorage.setItem('cryptflow_daily_summary_lang', currentLang);
+          setDailySummary(cleanAnswer);
+          setHasUnreadNotification(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch daily summary from AI", err);
+      }
+    };
+
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    if (cachedSummary && cachedTime && cachedLang === currentLang && (now - Number(cachedTime) < oneDayMs)) {
+      setDailySummary(cachedSummary);
+      if (!lastReadTime || Number(lastReadTime) < Number(cachedTime)) {
+        setHasUnreadNotification(true);
+      }
+    } else {
+      fetchDailySummary();
+    }
+  }, [currentLang]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('cryptflow_active_tab', tab);
+    } catch (err) {
+      console.error("Failed to save active tab state to sessionStorage", err);
+    }
+  }, [tab]);
+
+  const openNotifications = () => {
+    setShowFavoritesDropdown(false);
+    setShowNotifications(prev => {
+      const next = !prev;
+      if (next) {
+        setHasUnreadNotification(false);
+        localStorage.setItem('cryptflow_daily_summary_read_time', Date.now().toString());
+      }
+      return next;
+    });
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -56,7 +154,27 @@ export default function DashboardPage({ onLogout }) {
     }
   }
 
-  if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1fc8a4] border-t-transparent" /></div>;
+  if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#00d8f6] border-t-transparent" /></div>;
+  const liveTotalCryptoValue = portfolio?.assets?.reduce((sum, a) => {
+    const livePrice = Number(market?.prices?.[a.symbol] || 0);
+    return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
+  }, 0) || 0;
+
+  const baseTotalCryptoValue = portfolio?.assets?.reduce((sum, a) => {
+    const openPrice = Number(dailyOpenPrices?.[a.symbol] || basePrices?.[a.symbol] || 0);
+    return sum + (openPrice > 0 ? Number(a.quantity) * openPrice : Number(a.valueUsd || 0));
+  }, 0) || 0;
+
+  const liveTotalEquity = Number(portfolio?.usdBalance || 0) + liveTotalCryptoValue;
+  const baseTotalEquity = Number(portfolio?.usdBalance || 0) + baseTotalCryptoValue;
+
+  const cryptoChangePercent = baseTotalCryptoValue > 0 
+    ? ((liveTotalCryptoValue - baseTotalCryptoValue) / baseTotalCryptoValue) * 100 
+    : 0;
+
+  const equityChangePercent = baseTotalEquity > 0 
+    ? ((liveTotalEquity - baseTotalEquity) / baseTotalEquity) * 100 
+    : 0;
 
   const STREAM_STATUS_VIEW = {
     live: { dot: 'bg-emerald-400', label: t('dashboard.live') },
@@ -71,10 +189,9 @@ export default function DashboardPage({ onLogout }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111f]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#1fc8a4] shadow-[0_0_18px_#1fc8a4]" />
-            <span className="font-black tracking-tight">CRYPTFLOW</span>
-            <span className="hidden sm:inline text-xs text-slate-600">{t('dashboard.marketLab')}</span>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-10 w-10 object-contain" />
+            <span className="font-black tracking-tight text-lg text-gradient">CRYPTFLOW</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
             {/* Language flags */}
@@ -83,7 +200,7 @@ export default function DashboardPage({ onLogout }) {
                 onClick={() => changeAppLanguage('en')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'en'
-                    ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
+                    ? 'ring-2 ring-[#00d8f6] ring-offset-2 ring-offset-[#040a15] opacity-100'
                     : 'opacity-40 hover:opacity-80'
                 } rounded-full`}
                 title="English"
@@ -101,7 +218,7 @@ export default function DashboardPage({ onLogout }) {
                 onClick={() => changeAppLanguage('tr')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'tr'
-                    ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
+                    ? 'ring-2 ring-[#00d8f6] ring-offset-2 ring-offset-[#040a15] opacity-100'
                     : 'opacity-40 hover:opacity-80'
                 } rounded-full`}
                 title="Türkçe"
@@ -119,9 +236,135 @@ export default function DashboardPage({ onLogout }) {
               <span className={`h-2 w-2 rounded-full ${streamView.dot}`} />
               <span className="hidden sm:inline text-slate-400">{streamView.label}</span>
             </div>
+            <div className="relative">
+              <button
+                onClick={openNotifications}
+                className="text-slate-400 hover:text-[#00d8f6] transition-colors relative flex items-center"
+                aria-label="Notifications"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {hasUnreadNotification && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                    <h3 className="text-sm font-bold text-white">{t('dashboard.notifications')}</h3>
+                    <button onClick={() => setShowNotifications(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
+                  </div>
+                  {dailySummary ? (
+                    <div className="space-y-3">
+                      <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
+                        <div className="flex gap-2">
+                          <span className="text-[#00d8f6] text-xs">✦</span>
+                          <div>
+                            <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle')}</p>
+                            <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setTab('portfolio');
+                            setShowNotifications(false);
+                          }}
+                          className="mt-3 w-full rounded-lg bg-[#00d8f6]/10 py-1.5 text-center text-xs font-bold text-[#00d8f6] hover:bg-[#00d8f6]/20 transition"
+                        >
+                          {t('dashboard.goToPortfolio')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 py-4">{t('dashboard.noNotifications')}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Favorites Dropdown Toggle */}
+            <div className="relative">
+              <button
+                onClick={toggleFavoritesDropdown}
+                className="text-slate-400 hover:text-[#ff4b6e] transition-colors relative flex items-center"
+                aria-label="Favorites"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill={favorites.length > 0 ? "#ff4b6e" : "none"}
+                  stroke={favorites.length > 0 ? "#ff4b6e" : "currentColor"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-[22px] h-[22px]"
+                >
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+                {favorites.length > 0 && (
+                  <span className="absolute top-0.5 right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                )}
+              </button>
+
+              {showFavoritesDropdown && (
+                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites', 'Favorites')}
+                    </h3>
+                    <button onClick={() => setShowFavoritesDropdown(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close', 'Close')}</button>
+                  </div>
+                  {favorites.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {favorites.map(s => {
+                        const price = market?.prices?.[s];
+                        const change = changes?.[s];
+                        return (
+                          <div
+                            key={s}
+                            onClick={() => {
+                              setModal({ symbol: s, side: 'BUY' });
+                              setShowFavoritesDropdown(false);
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white">{s}</span>
+                              <span className="text-[10px] text-slate-400">/ USD</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-bold text-white block">{price ? money(price) : '...'}</span>
+                              {change !== undefined && (
+                                <span className={`text-[10px] font-bold ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
+                                  {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 py-4">
+                      {t('dashboard.noFavorites', 'No favorites added yet.')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowProfile(true)}
-              className="text-slate-400 hover:text-[#1fc8a4] transition-colors"
+              className="text-slate-400 hover:text-[#00d8f6] transition-colors"
               aria-label="Profile"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -140,7 +383,7 @@ export default function DashboardPage({ onLogout }) {
           <p className="label">{t('dashboard.portfolioOverview')}</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
             {t('dashboard.hello')}{' '}
-            <span className="text-[#1fc8a4]">
+            <span className="text-gradient">
               {sessionStorage.getItem('cryptflow_firstName') && sessionStorage.getItem('cryptflow_lastName')
                 ? `${sessionStorage.getItem('cryptflow_firstName')} ${sessionStorage.getItem('cryptflow_lastName')}`
                 : me?.email?.split('@')[0]}
@@ -150,11 +393,32 @@ export default function DashboardPage({ onLogout }) {
         </section>
 
         {/* Total Equity Summary */}
-        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
-          <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
-            <p className="mt-2 text-2xl font-black text-white">{money(portfolio?.totalValueUsd)}</p>
+        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2">
+          <div className="card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
+              <div className="mt-2 flex items-baseline gap-3">
+                <p className="text-2xl font-black text-white">{money(liveTotalEquity)}</p>
+                {equityChangePercent !== 0 && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    equityChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                  }`}>
+                    {equityChangePercent >= 0 ? '+' : ''}{equityChangePercent.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-white/10 pt-4 flex justify-between items-center">
+              <div>
+                <p className="label text-[10px] tracking-wider">{t('dashboard.availableCash')}</p>
+                <p className="mt-1.5 text-lg font-black text-slate-300">{money(portfolio?.usdBalance)}</p>
+              </div>
+              <p className="text-xs text-slate-500 hidden sm:block">{t('dashboard.availableCashDesc')}</p>
+            </div>
           </div>
+
+          <AssetAllocationChart portfolio={portfolio} market={market} t={t} />
         </section>
 
         {(error || marketError) && (
@@ -174,7 +438,7 @@ export default function DashboardPage({ onLogout }) {
               key={id}
               onClick={() => setTab(id)}
               className={`whitespace-nowrap border-b-2 px-5 py-3 text-sm font-bold ${
-                tab === id ? 'border-[#1fc8a4] text-white' : 'border-transparent text-slate-500'
+                tab === id ? 'border-[#00d8f6] text-[#00d8f6]' : 'border-transparent text-slate-500'
               }`}
             >
               {label}
@@ -183,16 +447,31 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} t={t} />}
+        {tab === 'market' && (
+          <MarketPanel
+            market={market}
+            portfolio={portfolio}
+            symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS}
+            onTrade={setModal}
+            t={t}
+            dateLocale={dateLocale}
+            changes={changes}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+          />
+        )}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
 
       {modal && (
         <TradeModal
-          symbol={modal}
-          livePrice={market?.prices?.[modal]}
-          priceStatus={symbolStatuses?.[modal]}
+          symbol={modal.symbol}
+          side={modal.side}
+          isSellOnly={modal.isSellOnly}
+          changePercent={changes?.[modal.symbol]}
+          livePrice={market?.prices?.[modal.symbol]}
+          priceStatus={symbolStatuses?.[modal.symbol]}
           portfolio={portfolio}
           onClose={() => setModal(null)}
           onComplete={refresh}
@@ -203,29 +482,61 @@ export default function DashboardPage({ onLogout }) {
         <ProfileModal
           me={me}
           onClose={() => setShowProfile(false)}
+          onLogout={onLogout}
         />
       )}
     </div>
   );
 }
 
-function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
+function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes, favorites, toggleFavorite }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30;
+
+  const totalPages = Math.ceil(symbols.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedSymbols = symbols.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [symbols.length]);
+
   return (
     <div>
       <div className="grid gap-4 md:grid-cols-3">
-        {SUPPORTED_SYMBOLS.map((s, i) => {
+        {displayedSymbols.map((s, i) => {
           const asset = portfolio?.assets?.find(a => a.symbol === s);
+          const globalIndex = startIndex + i;
+          const isFav = favorites.includes(s);
           return (
-            <button
+            <div
               key={s}
-              onClick={() => onTrade(s)}
-              className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#1fc8a4]/50"
+              onClick={() => onTrade({ symbol: s, side: 'BUY' })}
+              className="card group relative rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50 cursor-pointer"
             >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(s);
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
+                title={isFav ? "Favorilerden Çıkar" : "Favorilere Ekle"}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill={isFav ? "#ff4b6e" : "none"}
+                  stroke={isFav ? "#ff4b6e" : "currentColor"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-5 h-5"
+                >
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+              </button>
               <div className="flex items-center justify-between">
-                <span className={`grid h-11 w-11 place-items-center rounded-full font-black ${
-                  ['bg-amber-300 text-amber-950', 'bg-indigo-300 text-indigo-950', 'bg-fuchsia-300 text-fuchsia-950'][i]
-                }`}>{s[0]}</span>
-                <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
+                <CoinLogo symbol={s} index={globalIndex} />
               </div>
               <p className="mt-6 label">{s} / USD</p>
               <div className="mt-1 flex items-baseline justify-between">
@@ -242,82 +553,380 @@ function MarketPanel({ market, portfolio, onTrade, t, dateLocale, changes }) {
                 {t('dashboard.holding')}{' '}
                 <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
-      <p className="mt-4 text-xs text-slate-600">
-        {t('dashboard.lastPriceUpdate')}{' '}
-        {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
-      </p>
+
+      {totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+          <p className="text-xs text-slate-600">
+            {t('dashboard.lastPriceUpdate')}{' '}
+            {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
+              aria-label="Previous Page"
+            >
+              ←
+            </button>
+            <span className="text-sm font-semibold text-slate-300">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
+              aria-label="Next Page"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {totalPages <= 1 && (
+        <p className="mt-4 text-xs text-slate-600">
+          {t('dashboard.lastPriceUpdate')}{' '}
+          {market?.updatedAt ? new Date(market.updatedAt).toLocaleString(dateLocale) : t('dashboard.waiting')}
+        </p>
+      )}
     </div>
   );
 }
 
-function PortfolioPanel({ data, t }) {
+function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const activeAssets = data?.assets?.filter(a => Number(a.quantity) > 0) || [];
+
+  const totalCoinsValue = activeAssets.reduce((sum, a) => {
+    const livePrice = Number(market?.prices?.[a.symbol] || 0);
+    return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
+  }, 0);
+
+  const totalPages = Math.ceil(activeAssets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedAssets = activeAssets.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeAssets.length]);
+
   return (
     <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
-      <div className="card rounded-2xl p-6">
-        <p className="label">{t('dashboard.availableCash')}</p>
-        <p className="mt-3 text-4xl font-black">{money(data?.usdBalance)}</p>
-        <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
+      <div className="flex flex-col gap-6">
+        {/* Card 1: Available Cash */}
+        <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
+          <p className="label">{t('dashboard.availableCash')}</p>
+          <p className="mt-3 text-4xl font-black text-white">{money(data?.usdBalance)}</p>
+          <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
+        </div>
+        {/* Card 2: Total Crypto Value */}
+        <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
+          <p className="label">{t('dashboard.totalCoinValue')}</p>
+          <div className="mt-3 flex items-baseline gap-3">
+            <p className="text-4xl font-black text-white">{money(totalCoinsValue)}</p>
+            {cryptoChangePercent !== 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                cryptoChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+              }`}>
+                {cryptoChangePercent >= 0 ? '+' : ''}{cryptoChangePercent.toFixed(2)}%
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-sm text-slate-500">{t('dashboard.totalCoinValueDesc')}</p>
+        </div>
       </div>
-      <div className="card overflow-hidden rounded-2xl">
-        <div className="border-b border-white/10 p-6">
-          <p className="label">{t('dashboard.assetAllocation')}</p>
+      <div className="card overflow-hidden rounded-2xl flex flex-col justify-between">
+        <div>
+          <div className="border-b border-white/10 p-6">
+            <p className="label">{t('dashboard.assetAllocation')}</p>
+          </div>
+          <div className="divide-y divide-white/5">
+            {displayedAssets.length > 0 ? (
+              displayedAssets.map(a => {
+                const livePrice = Number(market?.prices?.[a.symbol] || 0);
+                const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
+                return (
+                  <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
+                    <b className="text-sm">{a.symbol}</b>
+                    <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
+                    <div className="text-right flex items-center justify-end gap-2.5">
+                      <span className="text-sm font-bold text-white">{money(liveValue)}</span>
+                      {changes?.[a.symbol] !== undefined && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          changes[a.symbol] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                        }`}>
+                          {changes[a.symbol] >= 0 ? '+' : ''}{changes[a.symbol].toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <button
+                        onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
+                        className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
+                      >
+                        {t('trade.sell')}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
+            )}
+          </div>
         </div>
-        <div className="divide-y divide-white/5">
-          {data?.assets && data.assets.length > 0 ? (
-            data.assets.map(a => (
-              <div key={a.symbol} className="grid grid-cols-3 border-b border-white/5 px-6 py-5 last:border-0 items-center">
-                <b className="text-sm">{a.symbol}</b>
-                <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
-                <span className="text-right text-sm font-bold text-white">{money(a.valueUsd)}</span>
-              </div>
-            ))
-          ) : (
-            <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
-          )}
-        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-white/10 p-5 bg-[#071320]/30 mt-auto">
+            <span className="text-xs text-slate-500">
+              {t('dashboard.pageInfo', {
+                start: startIndex + 1,
+                end: Math.min(startIndex + itemsPerPage, activeAssets.length),
+                total: activeAssets.length
+              })}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+              >
+                ← {t('dashboard.prevPage')}
+              </button>
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+              >
+                {t('dashboard.nextPage')} →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function HistoryPanel({ trades, t, dateLocale }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 5;
+  const totalPages = Math.ceil(trades.length / pageSize);
+
+  const startIndex = currentPage * pageSize;
+  const endIndex = startIndex + pageSize;
+  const pagedTrades = trades.slice(startIndex, endIndex);
+
   return (
-    <div className="card overflow-x-auto rounded-2xl">
-      <table className="w-full min-w-[700px] text-left">
-        <thead className="label border-b border-white/10">
-          <tr>
-            <th className="p-5">{t('dashboard.colTransaction')}</th>
-            <th>{t('dashboard.colQuantity')}</th>
-            <th>{t('dashboard.colPrice')}</th>
-            <th>{t('dashboard.colTotal')}</th>
-            <th>{t('dashboard.colTime')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {trades.length ? (
-            trades.map(t2 => (
-              <tr key={t2.id} className="border-b border-white/5">
-                <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {t2.side} · {t2.symbol}
-                </td>
-                <td>{coin(t2.quantity)}</td>
-                <td>{money(t2.unitPriceUsd)}</td>
-                <td>{money(t2.totalUsd)}</td>
-                <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
-              </tr>
-            ))
-          ) : (
+    <div className="card rounded-2xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px] text-left">
+          <thead className="label border-b border-white/10">
             <tr>
-              <td colSpan="5" className="p-10 text-center text-slate-500">{t('dashboard.noTransactions')}</td>
+              <th className="p-5">{t('dashboard.colTransaction')}</th>
+              <th>{t('dashboard.colQuantity')}</th>
+              <th>{t('dashboard.colPrice')}</th>
+              <th>{t('dashboard.colTotal')}</th>
+              <th>{t('dashboard.colTime')}</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {pagedTrades.length ? (
+              pagedTrades.map(t2 => (
+                <tr key={t2.id} className="border-b border-white/5">
+                  <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {t2.side} · {t2.symbol}
+                  </td>
+                  <td>{coin(t2.quantity)}</td>
+                  <td>{money(t2.unitPriceUsd)}</td>
+                  <td>{money(t2.totalUsd)}</td>
+                  <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="p-10 text-center text-slate-500">{t('dashboard.noTransactions')}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-white/10 p-5 bg-[#071320]/30">
+          <span className="text-xs text-slate-500">
+            {t('dashboard.pageInfo', {
+              start: startIndex + 1,
+              end: Math.min(endIndex, trades.length),
+              total: trades.length
+            })}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={currentPage === 0}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+            >
+              ← {t('dashboard.prevPage')}
+            </button>
+            <button
+              type="button"
+              disabled={endIndex >= trades.length}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+            >
+              {t('dashboard.nextPage')} →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function AssetAllocationChart({ portfolio, market, t }) {
+  const [hoveredAsset, setHoveredAsset] = useState(null);
+
+  if (!portfolio) {
+    return null;
+  }
+
+  const cash = Number(portfolio.usdBalance || 0);
+  const assets = portfolio.assets || [];
+
+  const items = [
+    { symbol: 'USD', value: cash, color: '#10b981', bgClass: 'bg-emerald-500' },
+    ...assets.map((a, idx) => {
+      const livePrice = Number(market?.prices?.[a.symbol] || 0);
+      const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
+      return {
+        symbol: a.symbol,
+        value: liveValue,
+        color: ['#fbbf24', '#6366f1', '#d946ef'][idx % 3] || '#fbbf24',
+        bgClass: ['bg-amber-400', 'bg-indigo-500', 'bg-fuchsia-500'][idx % 3] || 'bg-amber-400'
+      };
+    })
+  ].filter(item => item.value > 0);
+
+  const sum = items.reduce((s, i) => s + i.value, 0);
+  let cumulativePercent = 0;
+
+  return (
+    <div className="card rounded-2xl p-5 flex items-center justify-between">
+      <div className="flex items-center gap-6">
+        {/* SVG Doughnut Chart */}
+        <div className="relative h-20 w-20 flex-shrink-0">
+          <svg viewBox="0 0 36 36" className="h-full w-full transform -rotate-90 overflow-visible">
+            {items.length === 0 ? (
+              <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1e293b" strokeWidth="8" />
+            ) : (
+              items.map((item, index) => {
+                const percent = (item.value / sum) * 100;
+                const dashArray = `${percent} ${100 - percent}`;
+                const dashOffset = -cumulativePercent;
+                cumulativePercent += percent;
+
+                const isHovered = hoveredAsset?.symbol === item.symbol;
+
+                return (
+                  <circle
+                    key={index}
+                    cx="18"
+                    cy="18"
+                    r="15.9155"
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth={isHovered ? "10" : "8"}
+                    strokeDasharray={dashArray}
+                    strokeDashoffset={dashOffset}
+                    pointerEvents="stroke"
+                    className="transition-all duration-300 cursor-pointer"
+                    style={{
+                      transform: isHovered ? 'scale(1.06)' : 'scale(1)',
+                      transformOrigin: 'center',
+                    }}
+                    onMouseEnter={() => setHoveredAsset({ symbol: item.symbol, value: item.value, percent, color: item.color, bgClass: item.bgClass })}
+                    onMouseLeave={() => setHoveredAsset(null)}
+                  />
+                );
+              })
+            )}
+          </svg>
+        </div>
+
+        {/* Legend list (Interactive Tooltip) */}
+        <div className="flex flex-col justify-center h-14 min-w-[150px]">
+          {hoveredAsset ? (
+            <div className="animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`h-2.5 w-2.5 rounded-full ${hoveredAsset.bgClass}`} />
+                <span className="font-bold text-white text-sm">{hoveredAsset.symbol}</span>
+              </div>
+              <p className="mt-1 text-base font-black text-[#00d8f6]">
+                {money(hoveredAsset.value)}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {hoveredAsset.percent.toFixed(1)}% {t('dashboard.allocation')}
+              </p>
+            </div>
+          ) : (
+            <div className="text-slate-500 text-xs leading-relaxed animate-in fade-in duration-200">
+              <p className="font-bold text-slate-400">{t('dashboard.hoverChart')}</p>
+              <p className="text-[10px] mt-0.5">{t('dashboard.hoverDesc')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+      <p className="label hidden sm:block text-[9px] tracking-wider text-slate-500 mr-2">
+        {t('dashboard.assetAllocation')}
+      </p>
+    </div>
+  );
+}
+
+function CoinLogo({ symbol }) {
+  const [imgError, setImgError] = useState(false);
+
+  const getSymbolGradient = (sym) => {
+    let hash = 0;
+    for (let i = 0; i < sym.length; i++) {
+      hash = sym.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h1 = Math.abs(hash % 360);
+    const h2 = (h1 + 60) % 360;
+    return `linear-gradient(135deg, hsl(${h1}, 85%, 60%), hsl(${h2}, 90%, 40%))`;
+  };
+
+  if (imgError) {
+    const displaySymbol = symbol.length > 4 ? symbol.slice(0, 3) : symbol;
+    return (
+      <span
+        style={{ background: getSymbolGradient(symbol) }}
+        className="grid h-11 w-11 place-items-center rounded-full font-black text-[10px] text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)] tracking-tight uppercase"
+      >
+        {displaySymbol}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`}
+      alt={symbol}
+      onError={() => setImgError(true)}
+      className="h-11 w-11 rounded-full object-contain"
+      loading="lazy"
+    />
   );
 }
 

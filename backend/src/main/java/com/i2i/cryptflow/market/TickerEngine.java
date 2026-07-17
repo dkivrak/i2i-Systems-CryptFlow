@@ -1,9 +1,9 @@
 package com.i2i.cryptflow.market;
 
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,12 +20,14 @@ public class TickerEngine {
   private final MarketPriceService market;
   private final PriceSnapshotRepository snapshots;
   private final PriceSnapshotWriter writer;
-  private final Map<AssetSymbol, BigDecimal> initial;
+  private final SupportedSymbolsService supportedSymbols;
+  private final Map<String, BigDecimal> configuredPrices;
 
   public TickerEngine(
       MarketPriceService market,
       PriceSnapshotRepository snapshots,
       PriceSnapshotWriter writer,
+      SupportedSymbolsService supportedSymbols,
       @Value("${app.ticker.initial-prices.BTC}") BigDecimal btc,
       @Value("${app.ticker.initial-prices.ETH}") BigDecimal eth,
       @Value("${app.ticker.initial-prices.SOL}") BigDecimal sol
@@ -33,11 +35,8 @@ public class TickerEngine {
     this.market = market;
     this.snapshots = snapshots;
     this.writer = writer;
-    this.initial = Map.of(
-        AssetSymbol.BTC, btc,
-        AssetSymbol.ETH, eth,
-        AssetSymbol.SOL, sol
-    );
+    this.supportedSymbols = supportedSymbols;
+    this.configuredPrices = Map.of("BTC", btc, "ETH", eth, "SOL", sol);
   }
 
   @EventListener(ApplicationReadyEvent.class)
@@ -49,16 +48,21 @@ public class TickerEngine {
       // Redis is empty or incomplete; restore a complete market below.
     }
 
-    var prices = new EnumMap<AssetSymbol, BigDecimal>(AssetSymbol.class);
+    var prices = new LinkedHashMap<String, BigDecimal>();
     boolean usedInitialPrice = false;
 
-    for (var symbol : AssetSymbol.values()) {
-      var latest = snapshots.findFirstBySymbolOrderByRecordedAtDesc(symbol);
-      if (latest.isPresent()) {
-        prices.put(symbol, latest.get().getPriceUsd());
+    for (var symbol : supportedSymbols.getSymbols()) {
+      BigDecimal fetched = supportedSymbols.getInitialPrice(symbol);
+      if (fetched != null) {
+        prices.put(symbol, fetched);
       } else {
-        prices.put(symbol, initial.get(symbol));
-        usedInitialPrice = true;
+        var latest = snapshots.findFirstBySymbolOrderByRecordedAtDesc(symbol);
+        if (latest.isPresent()) {
+          prices.put(symbol, latest.get().getPriceUsd());
+        } else {
+          prices.put(symbol, getInitialPrice(symbol));
+          usedInitialPrice = true;
+        }
       }
     }
 
@@ -79,10 +83,26 @@ public class TickerEngine {
       return;
     }
 
-    var prices = new EnumMap<AssetSymbol, BigDecimal>(AssetSymbol.class);
-    for (var symbol : AssetSymbol.values()) {
-      prices.put(symbol, current.prices().get(symbol.name()));
+    var prices = new LinkedHashMap<String, BigDecimal>();
+    for (var symbol : supportedSymbols.getSymbols()) {
+      var price = current.prices().get(symbol);
+      if (price != null) {
+        prices.put(symbol, price);
+      }
     }
-    writer.write(prices, Instant.now());
+    if (!prices.isEmpty()) {
+      writer.write(prices, Instant.now());
+    }
+  }
+
+  private BigDecimal getInitialPrice(String symbol) {
+    if (configuredPrices.containsKey(symbol)) {
+      return configuredPrices.get(symbol);
+    }
+    BigDecimal price = supportedSymbols.getInitialPrice(symbol);
+    if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+      return price;
+    }
+    return new BigDecimal("1.00");
   }
 }

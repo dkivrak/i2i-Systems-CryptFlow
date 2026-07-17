@@ -1,9 +1,10 @@
 package com.i2i.cryptflow.trade;
 
 import com.i2i.cryptflow.market.MarketPriceService;
+import com.i2i.cryptflow.portfolio.PortfolioAsset;
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
 import com.i2i.cryptflow.shared.error.ApiException;
-import com.i2i.cryptflow.shared.model.AssetSymbol;
+import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import com.i2i.cryptflow.wallet.WalletRepository;
 import java.math.*;
 import java.time.Instant;
@@ -22,24 +23,36 @@ public class TradeService {
   private final PortfolioAssetRepository assets;
   private final TradeTransactionRepository trades;
   private final MarketPriceService market;
+  private final SupportedSymbolsService supportedSymbols;
 
-  public TradeService(WalletRepository wallets, PortfolioAssetRepository assets, TradeTransactionRepository trades, MarketPriceService market) {
+  public TradeService(WalletRepository wallets, PortfolioAssetRepository assets, TradeTransactionRepository trades, MarketPriceService market, SupportedSymbolsService supportedSymbols) {
     this.wallets = wallets;
     this.assets = assets;
     this.trades = trades;
     this.market = market;
+    this.supportedSymbols = supportedSymbols;
   }
 
   @Transactional
-  public TradeResult execute(UUID userId, AssetSymbol symbol, TradeSide side, BigDecimal rawQuantity) {
+  public TradeResult execute(UUID userId, String symbol, TradeSide side, BigDecimal rawQuantity) {
+    if (!supportedSymbols.isSupported(symbol))
+      throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", "Symbol '" + symbol + "' is not supported.");
     if (rawQuantity == null || rawQuantity.signum() <= 0 || Math.max(0, rawQuantity.stripTrailingZeros().scale()) > MAX_DECIMAL_PLACES)
       throw invalidAmount();
     var quantity = rawQuantity.setScale(MAX_DECIMAL_PLACES, RoundingMode.UNNECESSARY);
     var wallet = wallets.findByUserIdForUpdate(userId).orElseThrow();
-    var asset = assets.findForUpdate(wallet.getId(), symbol).orElseThrow();
-    var price = market.price(symbol).setScale(2, RoundingMode.HALF_UP);
+    var asset = assets.findForUpdate(wallet.getId(), symbol)
+        .orElseGet(() -> {
+          if (side == TradeSide.SELL) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_ASSET_BALANCE", "Insufficient asset balance for sale.");
+          }
+          return assets.save(new PortfolioAsset(wallet, symbol));
+        });
+    var price = market.price(symbol).setScale(MAX_DECIMAL_PLACES, RoundingMode.HALF_UP);
     var total = quantity.multiply(price).setScale(2, RoundingMode.HALF_UP);
-    if (total.signum() <= 0) throw invalidAmount();
+    if (total.signum() <= 0) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "MINIMUM_ORDER_VALUE", "Total order value must be at least $0.01.");
+    }
     if (side == TradeSide.BUY) {
       if (wallet.getUsdBalance().compareTo(total) < 0)
         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_FUNDS", "Insufficient USD balance for this transaction.");
@@ -75,5 +88,5 @@ public class TradeService {
     return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_AMOUNT", "Quantity must be positive and have at most " + MAX_DECIMAL_PLACES + " decimal places.");
   }
 
-  public record TradeResult(UUID id, AssetSymbol symbol, TradeSide side, BigDecimal quantity, BigDecimal unitPriceUsd, BigDecimal totalUsd, Instant executedAt) {}
+  public record TradeResult(UUID id, String symbol, TradeSide side, BigDecimal quantity, BigDecimal unitPriceUsd, BigDecimal totalUsd, Instant executedAt) {}
 }

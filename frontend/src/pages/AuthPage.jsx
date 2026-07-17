@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, token } from '../api/client';
+import { useMarketStream } from '../hooks/useMarketStream';
+import { money } from '../utils/format';
 
 export default function AuthPage({ onAuth }) {
   const { t } = useTranslation();
@@ -11,6 +13,18 @@ export default function AuthPage({ onAuth }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [randomSymbols, setRandomSymbols] = useState([]);
+  const { market, changes } = useMarketStream();
+
+  useEffect(() => {
+    if (randomSymbols.length === 0 && market?.prices) {
+      const allSymbols = Object.keys(market.prices);
+      if (allSymbols.length > 0) {
+        const shuffled = [...allSymbols].sort(() => 0.5 - Math.random());
+        setRandomSymbols(shuffled.slice(0, 9));
+      }
+    }
+  }, [market, randomSymbols]);
 
   async function submit(e) {
     e.preventDefault();
@@ -42,26 +56,135 @@ export default function AuthPage({ onAuth }) {
       setBusy(false);
     }
   }
+  const COIN_NAMES = {
+    BTC: 'Bitcoin',
+    ETH: 'Ethereum',
+    SOL: 'Solana',
+    BNB: 'Binance Coin',
+    ADA: 'Cardano',
+    XRP: 'Ripple',
+    DOGE: 'Dogecoin',
+    DOT: 'Polkadot',
+    AVAX: 'Avalanche',
+    LINK: 'Chainlink'
+  };
+
+  const displayCoins = (() => {
+    const activeList = randomSymbols.length > 0
+      ? randomSymbols
+      : ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX'];
+
+    return activeList.map(symbol => ({
+      symbol,
+      change: changes?.[symbol] || 0,
+      price: market?.prices?.[symbol]
+    }));
+  })();
 
   return (
     <main className="grid-lines min-h-screen grid lg:grid-cols-[1.15fr_.85fr]">
       {/* Left Panel */}
       <section className="hidden lg:flex flex-col justify-between p-14 border-r border-white/10">
-        <div className="flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full bg-[#1fc8a4] shadow-[0_0_20px_#1fc8a4]" />
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="CryptFlow Logo" className="h-12 w-12 object-contain" />
           <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
         </div>
-        <div>
-          <p className="label mb-5">{t('auth.paperMarketLab')}</p>
-          <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em]">
+        <div className="mt-8 mb-auto">
+          <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em] text-slate-100">
             {t('auth.moveWithMarket')}<br />
-            <span className="text-[#1fc8a4]">{t('auth.learnWithoutRisk')}</span>
+            <span className="text-gradient">{t('auth.learnWithoutRisk')}</span>
           </h1>
-          <p className="mt-7 max-w-lg text-lg leading-8 text-slate-400">
+          <p className="mt-4 max-w-lg text-lg leading-8 text-slate-400">
             {t('auth.heroDescription')}
           </p>
+
+          {/* Live Market Tickers */}
+          <div className="mt-5 max-w-md rounded-2xl bg-[#081522]/40 p-3 border border-white/5 overflow-hidden h-[300px] relative [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]">
+            <div className="animate-marquee-vertical flex flex-col gap-4 py-1">
+              {displayCoins.map((item, idx) => {
+                const symbol = item.symbol;
+                const price = item.price;
+                const change = item.change;
+                const coinName = COIN_NAMES[symbol] || symbol;
+                const colorClass = [
+                  'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                  'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+                ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
+
+                return (
+                  <div
+                    key={`${symbol}-1`}
+                    className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
+                        {symbol[0]}
+                      </span>
+                      <div className="text-left">
+                        <span className="font-bold text-white block">{symbol}</span>
+                        <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-white block">
+                        {price ? money(price) : '...'}
+                      </span>
+                      {change !== undefined && (
+                        <span className={`text-xs font-bold block ${
+                          change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
+                        }`}>
+                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {displayCoins.map((item, idx) => {
+                const symbol = item.symbol;
+                const price = item.price;
+                const change = item.change;
+                const coinName = COIN_NAMES[symbol] || symbol;
+                const colorClass = [
+                  'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                  'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+                ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
+
+                return (
+                  <div
+                    key={`${symbol}-2`}
+                    className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
+                        {symbol[0]}
+                      </span>
+                      <div className="text-left">
+                        <span className="font-bold text-white block">{symbol}</span>
+                        <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-white block">
+                        {price ? money(price) : '...'}
+                      </span>
+                      {change !== undefined && (
+                        <span className={`text-xs font-bold block ${
+                          change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
+                        }`}>
+                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 mt-6">
           {t('auth.disclaimer')}
         </p>
       </section>
@@ -69,8 +192,9 @@ export default function AuthPage({ onAuth }) {
       {/* Right Panel */}
       <section className="flex items-center justify-center p-6">
         <div className="card w-full max-w-md rounded-3xl p-7 sm:p-10">
-          <div className="mb-8 lg:hidden font-black">
-            CRYPT<span className="text-[#1fc8a4]">FLOW</span>
+          <div className="mb-8 lg:hidden flex items-center gap-2 font-black text-xl">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-8 w-8 object-contain" />
+            <span className="text-gradient">CRYPTFLOW</span>
           </div>
 
           <p className="label">

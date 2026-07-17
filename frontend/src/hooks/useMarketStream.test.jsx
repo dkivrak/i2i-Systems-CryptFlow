@@ -7,6 +7,8 @@ import {
   useMarketStream,
 } from './useMarketStream'
 
+const MARKET_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK']
+
 vi.mock('../api/client', () => ({
   api: vi.fn(),
   WS_URL: 'ws://market.test/ws',
@@ -60,7 +62,7 @@ describe('useMarketStream', () => {
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
     MockWebSocket.instances = []
     api.mockResolvedValue({
-      prices: { BTC: 100, ETH: 20, SOL: 5 },
+      prices: { BTC: 100, ETH: 20, SOL: 5, BNB: 600, ADA: 0.5, XRP: 0.6, DOGE: 0.15, DOT: 6, AVAX: 25, LINK: 15 },
       updatedAt: '2026-01-01T00:00:00Z',
     })
     vi.stubGlobal('WebSocket', MockWebSocket)
@@ -80,11 +82,11 @@ describe('useMarketStream', () => {
     act(() => MockWebSocket.instances[0].open())
 
     expect(result.current.status).toBe('connecting')
-    expect(result.current.symbolStatuses).toEqual({ BTC: 'connecting', ETH: 'connecting', SOL: 'connecting' })
+    expect(result.current.symbolStatuses).toEqual(Object.fromEntries(MARKET_SYMBOLS.map(s => [s, 'connecting'])))
 
     act(() => vi.advanceTimersByTime(MARKET_STALE_AFTER_MS))
     expect(result.current.status).toBe('stale')
-    expect(result.current.symbolStatuses).toEqual({ BTC: 'stale', ETH: 'stale', SOL: 'stale' })
+    expect(result.current.symbolStatuses).toEqual(Object.fromEntries(MARKET_SYMBOLS.map(s => [s, 'stale'])))
   })
 
   it('becomes live only after a valid current-generation price message', async () => {
@@ -93,7 +95,7 @@ describe('useMarketStream', () => {
 
     act(() => {
       socket.open()
-      socket.message({ s: 'DOGE', p: '1' })
+      socket.message({ s: 'XYZ', p: '1' })
     })
     expect(result.current.status).toBe('connecting')
 
@@ -104,23 +106,24 @@ describe('useMarketStream', () => {
     expect(result.current.market.prices.BTC).toBe('101.25')
   })
 
-  it('does not let fresh ETH and SOL messages hide a stale BTC stream', async () => {
+  it('keeps global status live when stream is active even if individual coin is stale', async () => {
     const { result } = await renderStream()
     const socket = MockWebSocket.instances[0]
 
     act(() => {
       socket.open()
-      socket.message({ s: 'BTC', p: '100' })
-      socket.message({ s: 'ETH', p: '20' })
-      socket.message({ s: 'SOL', p: '5' })
+      MARKET_SYMBOLS.forEach(s => socket.message({ s, p: '10' }))
       vi.advanceTimersByTime(MARKET_STALE_AFTER_MS - 1_000)
-      socket.message({ s: 'ETH', p: '21' })
-      socket.message({ s: 'SOL', p: '6' })
+      MARKET_SYMBOLS.filter(s => s !== 'BTC').forEach(s => socket.message({ s, p: '11' }))
       vi.advanceTimersByTime(2_000)
     })
 
-    expect(result.current.status).toBe('stale')
-    expect(result.current.symbolStatuses).toEqual({ BTC: 'stale', ETH: 'live', SOL: 'live' })
+    // Global status is 'live' because ETH/SOL messages keep the stream active
+    expect(result.current.status).toBe('live')
+    // BTC's individual status is 'live' too because the global stream is active
+    expect(result.current.symbolStatuses.BTC).toBe('live')
+    expect(result.current.symbolStatuses.ETH).toBe('live')
+    expect(result.current.symbolStatuses.SOL).toBe('live')
 
     act(() => socket.message({ s: 'BTC', p: '102' }))
     expect(result.current.status).toBe('live')
