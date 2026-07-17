@@ -519,7 +519,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                   e.stopPropagation();
                   toggleFavorite(s);
                 }}
-                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
                 title={isFav ? "Favorilerden Çıkar" : "Favorilere Ekle"}
               >
                 <svg
@@ -530,7 +530,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="w-4.5 h-4.5"
+                  className="w-5 h-5"
                 >
                   <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
                 </svg>
