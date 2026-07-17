@@ -76,7 +76,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
         objectMapper,
         marketPriceService,
         supportedSymbols,
-        defaultConnector(CONNECT_TIMEOUT_MS),
+        defaultConnector(supportedSymbols, CONNECT_TIMEOUT_MS),
         newReconnectExecutor(),
         CONNECT_TIMEOUT_MS,
         INITIAL_RETRY_DELAY_MS,
@@ -157,7 +157,10 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     if (replacedSession != null && replacedSession != concurrentSession) {
       closeReactSession(replacedSession, CloseStatus.NORMAL);
     }
-    supportedSymbols.getSymbols().forEach(symbol -> ensureBinanceConnection(symbol, generation));
+    List<List<String>> groups = getSymbolGroups(supportedSymbols);
+    for (int i = 0; i < groups.size(); i++) {
+      ensureBinanceConnection("group-" + i, generation);
+    }
   }
 
   @Override
@@ -437,20 +440,16 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
         return;
       }
       marketPriceService.updateSinglePrice(symbol, parsedPrice, Instant.now());
+      String rawPayload = objectMapper.writeValueAsString(Map.of("s", symbol, "p", parsedPrice.toPlainString()));
+      broadcastRawPayload(symbol, rawPayload);
     } catch (Exception exception) {
-      log.warn("Binance price could not be persisted for {}: {}", symbol, exception.getMessage());
-      return;
+      log.warn("Binance price could not be persisted or serialized for {}: {}", symbol, exception.getMessage());
     }
+  }
 
-    String rawPayload;
-    try {
-      rawPayload = objectMapper.writeValueAsString(Map.of("s", symbol, "p", price));
-    } catch (Exception exception) {
-      log.warn("Binance price could not be serialized for {}: {}", symbol, exception.getMessage());
-      return;
-    }
+  private void broadcastRawPayload(String symbol, String rawPayload) {
 
-    log.trace("Binance price received for {}: {}", symbol, price);
+    log.trace("Binance price received for {}: {}", symbol, rawPayload);
     for (Map.Entry<String, ConcurrentWebSocketSessionDecorator> entry
         : activeSessions.entrySet()) {
       String sessionId = entry.getKey();
@@ -570,17 +569,35 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
     return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
   }
 
-  private static BinanceConnector defaultConnector(long connectTimeoutMs) {
+  private static List<List<String>> getSymbolGroups(SupportedSymbolsService supportedSymbols) {
+    List<String> allSymbols = supportedSymbols.getSymbols();
+    List<List<String>> groups = new ArrayList<>();
+    int groupSize = 150;
+    for (int i = 0; i < allSymbols.size(); i += groupSize) {
+      groups.add(allSymbols.subList(i, Math.min(i + groupSize, allSymbols.size())));
+    }
+    return groups;
+  }
+
+  private static URI getBinanceGroupUri(SupportedSymbolsService supportedSymbols, String groupKey) {
+    int index = Integer.parseInt(groupKey.substring(6));
+    List<List<String>> groups = getSymbolGroups(supportedSymbols);
+    List<String> groupSymbols = groups.get(index);
+    
+    StringBuilder sb = new StringBuilder("wss://stream.binance.com/stream?streams=");
+    for (int i = 0; i < groupSymbols.size(); i++) {
+      if (i > 0) sb.append("/");
+      sb.append(groupSymbols.get(i).toLowerCase()).append("usdt@trade");
+    }
+    return URI.create(sb.toString());
+  }
+
+  private static BinanceConnector defaultConnector(SupportedSymbolsService supportedSymbols, long connectTimeoutMs) {
     HttpClient httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofMillis(connectTimeoutMs))
         .build();
     return (symbol, listener) -> httpClient.newWebSocketBuilder()
-        .buildAsync(binanceUri(symbol), listener);
-  }
-
-  private static URI binanceUri(String symbol) {
-    String lower = symbol.toLowerCase();
-    return URI.create("wss://stream.binance.com/ws/" + lower + "usdt@trade");
+        .buildAsync(getBinanceGroupUri(supportedSymbols, symbol), listener);
   }
 
   private static ScheduledExecutorService newReconnectExecutor() {
@@ -642,11 +659,25 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
           String message = buffer.toString();
           buffer.setLength(0);
           if (isCurrentConnection(symbol, webSocket)) {
-            broadcastPrice(symbol, message);
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(message);
+            com.fasterxml.jackson.databind.JsonNode dataNode = root.get("data");
+            if (dataNode != null) {
+              String pair = dataNode.get("s").asText();
+              String priceStr = dataNode.get("p").asText();
+              if (pair.endsWith("USDT")) {
+                String coin = pair.substring(0, pair.length() - 4);
+                BigDecimal parsedPrice = new BigDecimal(priceStr);
+                if (parsedPrice.signum() > 0) {
+                  marketPriceService.updateSinglePrice(coin, parsedPrice, Instant.now());
+                  String rawPayload = objectMapper.writeValueAsString(Map.of("s", coin, "p", parsedPrice.toPlainString()));
+                  broadcastRawPayload(coin, rawPayload);
+                }
+              }
+            }
           }
         }
       } catch (Exception exception) {
-        log.warn("Binance message handling failed for {}: {}", symbol, exception.getMessage());
+        log.warn("Binance message handling failed for group {}: {}", symbol, exception.getMessage());
       } finally {
         if (isCurrentConnection(symbol, webSocket)) {
           requestNextMessage(symbol, attempt, webSocket);

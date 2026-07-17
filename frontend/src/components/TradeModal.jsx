@@ -322,6 +322,7 @@ function CoinLogo({ symbol, index }) {
       alt={symbol}
       onError={() => setImgError(true)}
       className="h-11 w-11 rounded-full object-contain"
+      loading="lazy"
     />
   );
 }

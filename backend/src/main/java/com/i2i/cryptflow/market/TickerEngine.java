@@ -94,7 +94,6 @@ public class TickerEngine {
     if (configuredPrices.containsKey(symbol)) {
       return configuredPrices.get(symbol);
     }
-    // Default fallback price for symbols not configured in application.yml
-    return new BigDecimal("1.00");
+    return supportedSymbols.getInitialPrice(symbol);
   }
 }

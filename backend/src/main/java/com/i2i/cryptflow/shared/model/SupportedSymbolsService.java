@@ -3,19 +3,21 @@ package com.i2i.cryptflow.shared.model;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
  * Fetches all USDT trading pairs from Binance at startup
- * and provides the list of supported symbols to the rest of the application.
+ * and provides the list of supported symbols and their initial prices.
  */
 @Service
 public class SupportedSymbolsService {
@@ -29,6 +31,7 @@ public class SupportedSymbolsService {
   );
 
   private volatile List<String> symbols = FALLBACK_SYMBOLS;
+  private final Map<String, BigDecimal> initialPrices = new ConcurrentHashMap<>();
 
   @PostConstruct
   public void init() {
@@ -50,12 +53,16 @@ public class SupportedSymbolsService {
             String coin = pair.substring(0, pair.length() - USDT_SUFFIX.length());
             if (!coin.isEmpty() && !coin.contains("UP") && !coin.contains("DOWN") && !coin.contains("BULL") && !coin.contains("BEAR")) {
               fetched.add(coin);
+              try {
+                BigDecimal price = new BigDecimal(node.get("price").asText());
+                initialPrices.put(coin, price);
+              } catch (Exception ignored) {}
             }
           }
         }
         if (!fetched.isEmpty()) {
           symbols = Collections.unmodifiableList(fetched);
-          log.info("Loaded {} USDT symbols from Binance", symbols.size());
+          log.info("Loaded {} USDT symbols and prices from Binance", symbols.size());
         } else {
           log.warn("No USDT symbols found from Binance, using fallback list");
         }
@@ -73,5 +80,9 @@ public class SupportedSymbolsService {
 
   public boolean isSupported(String symbol) {
     return symbols.contains(symbol);
+  }
+
+  public BigDecimal getInitialPrice(String symbol) {
+    return initialPrices.getOrDefault(symbol, new BigDecimal("1.00"));
   }
 }

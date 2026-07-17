@@ -64,9 +64,7 @@ class PriceWebSocketHandlerTest {
     handler.afterConnectionEstablished(firstSession);
     handler.afterConnectionEstablished(secondSession);
 
-    for (String symbol : List.of("BTC", "ETH", "SOL")) {
-      assertEquals(1, connector.calls(symbol).size());
-    }
+    assertEquals(1, connector.calls("group-0").size());
 
     handler.afterConnectionClosed(firstSession, CloseStatus.NORMAL);
     handler.afterConnectionClosed(secondSession, CloseStatus.NORMAL);
@@ -89,20 +87,17 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall btc = connector.calls("BTC").getFirst();
+    ConnectionCall group0 = connector.calls("group-0").getFirst();
 
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
-    btc.listener().onClose(btc.webSocket(), 1000, "normal");
+    group0.listener().onClose(group0.webSocket(), 1000, "normal");
 
     verify(reconnectExecutor, never()).schedule(
         any(Runnable.class),
         anyLong(),
         eq(TimeUnit.MILLISECONDS)
     );
-    for (String symbol : List.of("BTC", "ETH", "SOL")) {
-      verify(connector.calls(symbol).getFirst().webSocket())
-          .sendClose(1000, "No active React sessions");
-    }
+    verify(group0.webSocket()).sendClose(1000, "No active React sessions");
   }
 
   @Test
@@ -111,12 +106,12 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall btc = connector.calls("BTC").getFirst();
+    ConnectionCall group0 = connector.calls("group-0").getFirst();
 
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
-    btc.future().complete(btc.webSocket());
+    group0.future().complete(group0.webSocket());
 
-    verify(btc.webSocket()).sendClose(1000, "Inactive connection attempt");
+    verify(group0.webSocket()).sendClose(1000, "Inactive connection attempt");
     verifyNoInteractions(reconnectExecutor);
   }
 
@@ -127,15 +122,15 @@ class PriceWebSocketHandlerTest {
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
 
-    ConnectionCall firstBtc = connector.calls("BTC").getFirst();
-    firstBtc.listener().onError(firstBtc.webSocket(), new IOException("first failure"));
+    ConnectionCall firstGroup = connector.calls("group-0").getFirst();
+    firstGroup.listener().onError(firstGroup.webSocket(), new IOException("first failure"));
     Runnable firstRetry = scheduledRetry();
     firstRetry.run();
-    assertEquals(2, connector.calls("BTC").size());
+    assertEquals(2, connector.calls("group-0").size());
 
     clearInvocations(reconnectExecutor);
-    ConnectionCall secondBtc = connector.calls("BTC").get(1);
-    secondBtc.listener().onError(secondBtc.webSocket(), new IOException("second failure"));
+    ConnectionCall secondGroup = connector.calls("group-0").get(1);
+    secondGroup.listener().onError(secondGroup.webSocket(), new IOException("second failure"));
 
     verify(reconnectExecutor).schedule(
         any(Runnable.class),
@@ -150,19 +145,17 @@ class PriceWebSocketHandlerTest {
     var handler = handler(connector);
     WebSocketSession session = reactSession("react-1");
     handler.afterConnectionEstablished(session);
-    ConnectionCall firstBtc = connector.calls("BTC").getFirst();
+    ConnectionCall firstGroup = connector.calls("group-0").getFirst();
 
     if (signal == DisconnectSignal.CLOSE) {
-      firstBtc.listener().onClose(firstBtc.webSocket(), 1006, "lost");
+      firstGroup.listener().onClose(firstGroup.webSocket(), 1006, "lost");
     } else {
-      firstBtc.listener().onError(firstBtc.webSocket(), new IOException("lost"));
+      firstGroup.listener().onError(firstGroup.webSocket(), new IOException("lost"));
     }
 
     scheduledRetry().run();
 
-    assertEquals(2, connector.calls("BTC").size());
-    assertEquals(1, connector.calls("ETH").size());
-    assertEquals(1, connector.calls("SOL").size());
+    assertEquals(2, connector.calls("group-0").size());
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
   }
 
