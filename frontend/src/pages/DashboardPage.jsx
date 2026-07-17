@@ -32,6 +32,33 @@ export default function DashboardPage({ onLogout }) {
   const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
   const [dailySummary, setDailySummary] = useState('');
 
+  const [showFavoritesDropdown, setShowFavoritesDropdown] = useState(false);
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cryptflow_favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('cryptflow_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (symbol) => {
+    setFavorites(prev =>
+      prev.includes(symbol)
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol]
+    );
+  };
+
+  const toggleFavoritesDropdown = () => {
+    setShowFavoritesDropdown(prev => !prev);
+    setShowNotifications(false);
+  };
+
   const currentLang = i18n.language;
 
   useEffect(() => {
@@ -85,6 +112,7 @@ export default function DashboardPage({ onLogout }) {
   }, [tab]);
 
   const openNotifications = () => {
+    setShowFavoritesDropdown(false);
     setShowNotifications(prev => {
       const next = !prev;
       if (next) {
@@ -260,6 +288,79 @@ export default function DashboardPage({ onLogout }) {
               )}
             </div>
 
+            {/* Favorites Dropdown Toggle */}
+            <div className="relative">
+              <button
+                onClick={toggleFavoritesDropdown}
+                className="text-slate-400 hover:text-[#ff4b6e] transition-colors relative flex items-center"
+                aria-label="Favorites"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill={favorites.length > 0 ? "#ff4b6e" : "none"}
+                  stroke={favorites.length > 0 ? "#ff4b6e" : "currentColor"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-[22px] h-[22px]"
+                >
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+                {favorites.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white scale-90">
+                    {favorites.length}
+                  </span>
+                )}
+              </button>
+
+              {showFavoritesDropdown && (
+                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites', 'Favorites')}
+                    </h3>
+                    <button onClick={() => setShowFavoritesDropdown(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close', 'Close')}</button>
+                  </div>
+                  {favorites.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {favorites.map(s => {
+                        const price = market?.prices?.[s];
+                        const change = changes?.[s];
+                        return (
+                          <div
+                            key={s}
+                            onClick={() => {
+                              setModal({ symbol: s, side: 'BUY' });
+                              setShowFavoritesDropdown(false);
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white">{s}</span>
+                              <span className="text-[10px] text-slate-400">/ USD</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-bold text-white block">{price ? money(price) : '...'}</span>
+                              {change !== undefined && (
+                                <span className={`text-[10px] font-bold ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
+                                  {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 py-4">
+                      {t('dashboard.noFavorites', 'No favorites added yet.')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowProfile(true)}
               className="text-slate-400 hover:text-[#00d8f6] transition-colors"
@@ -345,7 +446,19 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
+        {tab === 'market' && (
+          <MarketPanel
+            market={market}
+            portfolio={portfolio}
+            symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS}
+            onTrade={setModal}
+            t={t}
+            dateLocale={dateLocale}
+            changes={changes}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+          />
+        )}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
@@ -375,7 +488,7 @@ export default function DashboardPage({ onLogout }) {
   );
 }
 
-function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes }) {
+function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes, favorites, toggleFavorite }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
@@ -393,14 +506,38 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
         {displayedSymbols.map((s, i) => {
           const asset = portfolio?.assets?.find(a => a.symbol === s);
           const globalIndex = startIndex + i;
+          const isFav = favorites.includes(s);
           return (
-            <button
+            <div
               key={s}
               onClick={() => onTrade({ symbol: s, side: 'BUY' })}
-              className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50"
+              className="card group relative rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50 cursor-pointer"
             >
               <div className="flex items-center justify-between">
-                <CoinLogo symbol={s} index={globalIndex} />
+                <div className="flex items-center gap-2">
+                  <CoinLogo symbol={s} index={globalIndex} />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(s);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center"
+                    title={isFav ? "Favorilerden Çıkar" : "Favorilere Ekle"}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill={isFav ? "#ff4b6e" : "none"}
+                      stroke={isFav ? "#ff4b6e" : "currentColor"}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-4 h-4"
+                    >
+                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                    </svg>
+                  </button>
+                </div>
                 <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
               </div>
               <p className="mt-6 label">{s} / USD</p>
@@ -418,7 +555,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                 {t('dashboard.holding')}{' '}
                 <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
