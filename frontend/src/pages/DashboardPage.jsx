@@ -291,18 +291,28 @@ export default function DashboardPage({ onLogout }) {
         </section>
 
         {/* Total Equity Summary */}
-        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-3">
-          <div className="card rounded-2xl p-5">
-            <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
-            <div className="mt-2 flex items-baseline gap-3">
-              <p className="text-2xl font-black text-white">{money(liveTotalEquity)}</p>
-              {equityChangePercent !== 0 && (
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  equityChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                }`}>
-                  {equityChangePercent >= 0 ? '+' : ''}{equityChangePercent.toFixed(2)}%
-                </span>
-              )}
+        <section className="mb-8 grid gap-4 grid-cols-1 sm:grid-cols-2">
+          <div className="card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <p className="label text-[10px] tracking-wider">{t('dashboard.totalEquity')}</p>
+              <div className="mt-2 flex items-baseline gap-3">
+                <p className="text-2xl font-black text-white">{money(liveTotalEquity)}</p>
+                {equityChangePercent !== 0 && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    equityChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                  }`}>
+                    {equityChangePercent >= 0 ? '+' : ''}{equityChangePercent.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-white/10 pt-4 flex justify-between items-center">
+              <div>
+                <p className="label text-[10px] tracking-wider">{t('dashboard.availableCash')}</p>
+                <p className="mt-1.5 text-lg font-black text-slate-300">{money(portfolio?.usdBalance)}</p>
+              </div>
+              <p className="text-xs text-slate-500 hidden sm:block">{t('dashboard.availableCashDesc')}</p>
             </div>
           </div>
 
@@ -677,7 +687,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
   let cumulativePercent = 0;
 
   return (
-    <div className="card rounded-2xl p-5 flex items-center justify-between col-span-2">
+    <div className="card rounded-2xl p-5 flex items-center justify-between">
       <div className="flex items-center gap-6">
         {/* SVG Doughnut Chart */}
         <div className="relative h-20 w-20 flex-shrink-0">
