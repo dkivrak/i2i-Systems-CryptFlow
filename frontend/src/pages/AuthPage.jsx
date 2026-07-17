@@ -55,7 +55,6 @@ export default function AuthPage({ onAuth }) {
           <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
         </div>
         <div className="mt-8 mb-auto">
-          <p className="label mb-5">{t('auth.paperMarketLab')}</p>
           <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em]">
             {t('auth.moveWithMarket')}<br />
             <span className="text-[#1fc8a4]">{t('auth.learnWithoutRisk')}</span>
