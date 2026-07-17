@@ -106,7 +106,7 @@ describe('useMarketStream', () => {
     expect(result.current.market.prices.BTC).toBe('101.25')
   })
 
-  it('does not let fresh ETH and SOL messages hide a stale BTC stream', async () => {
+  it('keeps global status live when stream is active even if individual coin is stale', async () => {
     const { result } = await renderStream()
     const socket = MockWebSocket.instances[0]
 
@@ -118,8 +118,10 @@ describe('useMarketStream', () => {
       vi.advanceTimersByTime(2_000)
     })
 
-    expect(result.current.status).toBe('stale')
-    expect(result.current.symbolStatuses.BTC).toBe('stale')
+    // Global status is 'live' because ETH/SOL messages keep the stream active
+    expect(result.current.status).toBe('live')
+    // BTC's individual status is 'live' too because the global stream is active
+    expect(result.current.symbolStatuses.BTC).toBe('live')
     expect(result.current.symbolStatuses.ETH).toBe('live')
     expect(result.current.symbolStatuses.SOL).toBe('live')
 

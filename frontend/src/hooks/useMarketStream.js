@@ -41,31 +41,31 @@ export function useMarketStream() {
     const updateHealth = (now = Date.now()) => {
       if (!alive || !socket || socket.readyState !== WebSocket.OPEN) return
 
-      let hasLiveSymbol = false
-      let hasStaleSymbol = false
+      // Global stale: based on whether ANY websocket message arrived recently
+      const globalIsLive = lastSocketMessageAt !== null && now - lastSocketMessageAt <= MARKET_STALE_AFTER_MS;
+      const globalIsStale = (lastSocketMessageAt !== null && now - lastSocketMessageAt > MARKET_STALE_AFTER_MS)
+        || (lastSocketMessageAt === null && openedAt !== null && now - openedAt >= MARKET_STALE_AFTER_MS);
+
       const nextStatuses = {}
       const activeSymbols = marketRef.current?.prices ? Object.keys(marketRef.current.prices) : []
-
-      const socketIsStale = lastSocketMessageAt === null && openedAt !== null && now - openedAt >= MARKET_STALE_AFTER_MS;
 
       for (const symbol of activeSymbols) {
         const lastMessageAt = lastValidMessageAt[symbol] || null
         if (lastMessageAt !== null && now - lastMessageAt <= MARKET_STALE_AFTER_MS) {
           nextStatuses[symbol] = 'live'
-          hasLiveSymbol = true
-        } else if (socketIsStale || (lastMessageAt !== null && now - lastMessageAt > MARKET_STALE_AFTER_MS)) {
+        } else if (globalIsStale) {
           nextStatuses[symbol] = 'stale'
-          hasStaleSymbol = true
         } else {
-          nextStatuses[symbol] = 'connecting'
+          // Stream is live but this specific coin hasn't updated yet — mark as live anyway
+          nextStatuses[symbol] = globalIsLive ? 'live' : 'connecting'
         }
       }
 
       setSymbolStatuses(nextStatuses)
       setStatus(
-        (hasStaleSymbol || socketIsStale)
+        globalIsStale
           ? 'stale'
-          : hasLiveSymbol
+          : globalIsLive
           ? 'live'
           : 'connecting'
       )
