@@ -169,3 +169,18 @@ button, input {
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 216, 246, 0.3);
 }
+
+/* Slide in from right for tickers */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translate3d(40px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+.animate-slide-right {
+  animation: slide-in-right 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

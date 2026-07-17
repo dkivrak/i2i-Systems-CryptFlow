@@ -45,6 +45,40 @@ export default function AuthPage({ onAuth }) {
       setBusy(false);
     }
   }
+  const COIN_NAMES = {
+    BTC: 'Bitcoin',
+    ETH: 'Ethereum',
+    SOL: 'Solana',
+    BNB: 'Binance Coin',
+    ADA: 'Cardano',
+    XRP: 'Ripple',
+    DOGE: 'Dogecoin',
+    DOT: 'Polkadot',
+    AVAX: 'Avalanche',
+    LINK: 'Chainlink'
+  };
+
+  const displayCoins = (() => {
+    const sorted = Object.keys(changes || {})
+      .map(symbol => ({
+        symbol,
+        absChange: Math.abs(changes[symbol] || 0),
+        change: changes[symbol] || 0,
+        price: market?.prices?.[symbol]
+      }))
+      .filter(item => item.price !== undefined && item.price !== null)
+      .sort((a, b) => b.absChange - a.absChange);
+
+    if (sorted.length >= 3) {
+      return sorted.slice(0, 3);
+    }
+
+    return ['BTC', 'ETH', 'SOL'].map(symbol => ({
+      symbol,
+      change: changes?.[symbol] || 0,
+      price: market?.prices?.[symbol]
+    }));
+  })();
 
   return (
     <main className="grid-lines min-h-screen grid lg:grid-cols-[1.15fr_.85fr]">
@@ -64,15 +98,24 @@ export default function AuthPage({ onAuth }) {
           </p>
 
           {/* Live Market Tickers */}
-          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/60 p-5 border border-white/5 space-y-4">
-            {['BTC', 'ETH', 'SOL'].map((symbol, idx) => {
-              const price = market?.prices?.[symbol];
-              const change = changes?.[symbol];
-              const coinName = { BTC: 'Bitcoin', ETH: 'Ethereum', SOL: 'Solana' }[symbol];
-              const colorClass = ['bg-amber-300 text-amber-950', 'bg-indigo-300 text-indigo-950', 'bg-fuchsia-300 text-fuchsia-950'][idx];
+          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/60 p-5 border border-white/5 space-y-4 overflow-hidden">
+            {displayCoins.map((item, idx) => {
+              const symbol = item.symbol;
+              const price = item.price;
+              const change = item.change;
+              const coinName = COIN_NAMES[symbol] || symbol;
+              const colorClass = [
+                'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+              ][idx] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
 
               return (
-                <div key={symbol} className="flex items-center justify-between text-sm">
+                <div
+                  key={symbol}
+                  className="flex items-center justify-between text-sm animate-slide-right"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
                   <div className="flex items-center gap-3">
                     <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs ${colorClass}`}>
                       {symbol[0]}
@@ -88,7 +131,7 @@ export default function AuthPage({ onAuth }) {
                     </span>
                     {change !== undefined && (
                       <span className={`text-xs font-bold block ${
-                        change >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
                       }`}>
                         {change >= 0 ? '+' : ''}{change.toFixed(2)}%
                       </span>
