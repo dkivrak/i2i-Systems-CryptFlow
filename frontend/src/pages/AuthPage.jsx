@@ -56,6 +56,19 @@ export default function AuthPage({ onAuth }) {
       setBusy(false);
     }
   }
+  const COIN_NAMES = {
+    BTC: 'Bitcoin',
+    ETH: 'Ethereum',
+    SOL: 'Solana',
+    BNB: 'Binance Coin',
+    ADA: 'Cardano',
+    XRP: 'Ripple',
+    DOGE: 'Dogecoin',
+    DOT: 'Polkadot',
+    AVAX: 'Avalanche',
+    LINK: 'Chainlink'
+  };
+
   const displayCoins = (() => {
     const activeList = randomSymbols.length > 0
       ? randomSymbols
@@ -86,12 +99,13 @@ export default function AuthPage({ onAuth }) {
           </p>
 
           {/* Live Market Tickers */}
-          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/40 p-1 border border-white/5 overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_15%,white_85%,transparent)]">
-            <div className="animate-marquee flex gap-4 py-3">
+          <div className="mt-10 max-w-md rounded-2xl bg-[#081522]/40 p-3 border border-white/5 overflow-hidden h-[300px] relative [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]">
+            <div className="animate-marquee-vertical flex flex-col gap-4 py-1">
               {displayCoins.map((item, idx) => {
                 const symbol = item.symbol;
                 const price = item.price;
                 const change = item.change;
+                const coinName = COIN_NAMES[symbol] || symbol;
                 const colorClass = [
                   'bg-amber-400/20 text-amber-300 border border-amber-500/20',
                   'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
@@ -101,21 +115,28 @@ export default function AuthPage({ onAuth }) {
                 return (
                   <div
                     key={`${symbol}-1`}
-                    className="flex items-center gap-3 bg-[#0a1424]/80 border border-white/5 rounded-2xl px-4 py-2.5 backdrop-blur-md min-w-[145px]"
+                    className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md"
                   >
-                    <span className={`grid h-7 w-7 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
-                      {symbol[0]}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white text-xs">{symbol}</span>
-                        {change !== undefined && (
-                          <span className={`text-[10px] font-black ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
-                            {change >= 0 ? '+' : ''}{change.toFixed(1)}%
-                          </span>
-                        )}
+                    <div className="flex items-center gap-3">
+                      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
+                        {symbol[0]}
+                      </span>
+                      <div className="text-left">
+                        <span className="font-bold text-white block">{symbol}</span>
+                        <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
                       </div>
-                      <span className="text-[10px] text-white/70 block mt-0.5">{price ? money(price) : '...'}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-white block">
+                        {price ? money(price) : '...'}
+                      </span>
+                      {change !== undefined && (
+                        <span className={`text-xs font-bold block ${
+                          change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
+                        }`}>
+                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -124,6 +145,7 @@ export default function AuthPage({ onAuth }) {
                 const symbol = item.symbol;
                 const price = item.price;
                 const change = item.change;
+                const coinName = COIN_NAMES[symbol] || symbol;
                 const colorClass = [
                   'bg-amber-400/20 text-amber-300 border border-amber-500/20',
                   'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
@@ -133,21 +155,28 @@ export default function AuthPage({ onAuth }) {
                 return (
                   <div
                     key={`${symbol}-2`}
-                    className="flex items-center gap-3 bg-[#0a1424]/80 border border-white/5 rounded-2xl px-4 py-2.5 backdrop-blur-md min-w-[145px]"
+                    className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md"
                   >
-                    <span className={`grid h-7 w-7 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
-                      {symbol[0]}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white text-xs">{symbol}</span>
-                        {change !== undefined && (
-                          <span className={`text-[10px] font-black ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
-                            {change >= 0 ? '+' : ''}{change.toFixed(1)}%
-                          </span>
-                        )}
+                    <div className="flex items-center gap-3">
+                      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
+                        {symbol[0]}
+                      </span>
+                      <div className="text-left">
+                        <span className="font-bold text-white block">{symbol}</span>
+                        <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
                       </div>
-                      <span className="text-[10px] text-white/70 block mt-0.5">{price ? money(price) : '...'}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-white block">
+                        {price ? money(price) : '...'}
+                      </span>
+                      {change !== undefined && (
+                        <span className={`text-xs font-bold block ${
+                          change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
+                        }`}>
+                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

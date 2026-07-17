@@ -185,20 +185,21 @@ button, input {
   animation: slide-in-right 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Infinite Marquee Ticker Animation */
-@keyframes marquee {
+/* Infinite Vertical Marquee Animation */
+@keyframes marquee-vertical {
   0% {
     transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(0, -50%, 0);
   }
 }
-.animate-marquee {
+.animate-marquee-vertical {
   display: flex;
-  width: max-content;
-  animation: marquee 30s linear infinite;
+  flex-direction: column;
+  height: max-content;
+  animation: marquee-vertical 30s linear infinite;
 }
-.animate-marquee:hover {
+.animate-marquee-vertical:hover {
   animation-play-state: paused;
 }
