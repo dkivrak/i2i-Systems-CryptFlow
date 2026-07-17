@@ -36,5 +36,5 @@ app:
       SOL: ${TICKER_INITIAL_SOL_PRICE:150.00}
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    model: ${GEMINI_MODEL:gemini-3.1-flash-lite}
     timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:15}
