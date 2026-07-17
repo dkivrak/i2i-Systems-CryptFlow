@@ -308,8 +308,9 @@ export default function DashboardPage({ onLogout }) {
                   <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
                 </svg>
                 {favorites.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white scale-90">
-                    {favorites.length}
+                  <span className="absolute top-0.5 right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                   </span>
                 )}
               </button>
@@ -513,32 +514,29 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
               onClick={() => onTrade({ symbol: s, side: 'BUY' })}
               className="card group relative rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50 cursor-pointer"
             >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(s);
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
+                title={isFav ? "Favorilerden Çıkar" : "Favorilere Ekle"}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill={isFav ? "#ff4b6e" : "none"}
+                  stroke={isFav ? "#ff4b6e" : "currentColor"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4.5 h-4.5"
+                >
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+              </button>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CoinLogo symbol={s} index={globalIndex} />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(s);
-                    }}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center"
-                    title={isFav ? "Favorilerden Çıkar" : "Favorilere Ekle"}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill={isFav ? "#ff4b6e" : "none"}
-                      stroke={isFav ? "#ff4b6e" : "currentColor"}
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-4 h-4"
-                    >
-                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                    </svg>
-                  </button>
-                </div>
-                <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
+                <CoinLogo symbol={s} index={globalIndex} />
               </div>
               <p className="mt-6 label">{s} / USD</p>
               <div className="mt-1 flex items-baseline justify-between">
