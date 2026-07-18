@@ -715,7 +715,7 @@ function EquityChart({ history, currentTotalValue, totalCost, usdBalance }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  // Calculate profit stats
+  // Calculate overall lifetime profit stats
   const netProfit = currentTotalValue - totalCost;
   const netProfitPercent = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
 
@@ -767,6 +767,15 @@ function EquityChart({ history, currentTotalValue, totalCost, usdBalance }) {
     return result;
   }, [history, selectedTimeframe, currentTotalValue]);
 
+  // Calculate specific timeframe change (first point to last point)
+  const firstPoint = chartData[0];
+  const lastPoint = chartData[chartData.length - 1];
+  const firstVal = firstPoint ? firstPoint.value : currentTotalValue;
+  const lastVal = lastPoint ? lastPoint.value : currentTotalValue;
+
+  const timeframeChange = lastVal - firstVal;
+  const timeframeChangePercent = firstVal > 0 ? (timeframeChange / firstVal) * 100 : 0;
+
   const values = chartData.map(h => h.value);
   const minVal = Math.min(...values) * 0.995;
   const maxVal = Math.max(...values) * 1.005;
@@ -796,15 +805,15 @@ function EquityChart({ history, currentTotalValue, totalCost, usdBalance }) {
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-black text-white">{money(currentTotalValue)}</span>
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-              netProfit >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+              timeframeChange >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
             }`}>
-              {netProfit >= 0 ? '+' : ''}{money(netProfit)} ({netProfitPercent >= 0 ? '+' : ''}{netProfitPercent.toFixed(2)}%)
+              {timeframeChange >= 0 ? '+' : ''}{money(timeframeChange)} ({timeframeChangePercent >= 0 ? '+' : ''}{timeframeChangePercent.toFixed(2)}%)
             </span>
           </div>
         </div>
         
         {/* Timeframe Selector */}
-        <div className="flex bg-[#040a15] rounded-xl p-1 border border-white/5 gap-1">
+        <div className="flex bg-[#040a15] rounded-xl p-1 border border-white/5 gap-1 notranslate">
           {['1m', '1h', '1d', '1w', '1month', '1y'].map(tf => (
             <button
               key={tf}
