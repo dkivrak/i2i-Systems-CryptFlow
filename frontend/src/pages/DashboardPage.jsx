@@ -1512,7 +1512,6 @@ function NewsPanel({ t, dateLocale }) {
   const { i18n } = useTranslation();
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(6);
 
   useEffect(() => {
     // Curated dynamic news data that respects current language and always stays fresh by anchoring publication time to current timestamp.
@@ -1681,6 +1680,10 @@ function NewsPanel({ t, dateLocale }) {
     setLoading(false);
   }, [dateLocale]);
 
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 6;
+  const totalPages = Math.ceil(news.length / pageSize);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -1690,7 +1693,9 @@ function NewsPanel({ t, dateLocale }) {
     );
   }
 
-  const displayedNews = news.slice(0, visibleCount);
+  const startIndex = currentPage * pageSize;
+  const endIndex = startIndex + pageSize;
+  const displayedNews = news.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-6">
@@ -1759,14 +1764,33 @@ function NewsPanel({ t, dateLocale }) {
         })}
       </div>
 
-      {visibleCount < news.length && (
-        <div className="text-center pt-4">
-          <button
-            onClick={() => setVisibleCount(prev => prev + 6)}
-            className="btn bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold py-2.5 px-8 text-xs transition"
-          >
-            {t('dashboard.nextPage', { defaultValue: 'Load More' })}
-          </button>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-white/10 p-5 bg-[#071320]/30 rounded-2xl mt-6">
+          <span className="text-xs text-slate-500 font-medium">
+            {t('dashboard.pageInfo', { start: startIndex + 1, end: Math.min(endIndex, news.length), total: news.length })}
+          </span>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 0}
+              onClick={() => {
+                setCurrentPage(p => p - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn bg-white/5 border border-white/10 hover:bg-white/10 text-white py-1.5 px-4 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t('dashboard.prevPage', { defaultValue: 'Previous' })}
+            </button>
+            <button
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => {
+                setCurrentPage(p => p + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn bg-white/5 border border-white/10 hover:bg-white/10 text-white py-1.5 px-4 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t('dashboard.nextPage', { defaultValue: 'Next' })}
+            </button>
+          </div>
         </div>
       )}
     </div>
