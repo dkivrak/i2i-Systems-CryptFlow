@@ -1,228 +1,198 @@
-# CryptFlow - Virtual Trading & Portfolio Analyzer
+# CryptFlow 🚀
+### Paper Trading & AI Market Assistant
 
-CryptFlow is a paper-trading web application that integrates real-time market data from Binance, allowing users to test trading strategies using a virtual USD balance without financial risk. It features portfolio diagnostics and risk insights powered by Gemini AI.
-
----
-
-## Features
-
-* **Binance WebSocket Integration:** The backend connects to the Binance WebSocket stream (`!miniTicker@arr`) to track over 620 USDT trading pairs, updating prices in memory within milliseconds. The data ingestion layer is fully decoupled from the core business logic using the `ExternalPriceProvider` Java interface, conforming strictly to section 5.3 specifications.
-* **Real-time Price Stream:** The React frontend connects to the backend via a native WebSocket connection to receive live price updates. Price shifts are highlighted in the UI using clean visual change animations.
-* **Reliable Token Logos:** Logos are loaded from a primary GitHub cryptocurrency icon repository, falling back automatically to the CoinCap API if a token is not found, before defaulting to a gradient letter avatar.
-* **Safe Trade Execution:** Balances and asset holdings are locked using Database Pessimistic Write Locks within a single transaction, ensuring ACID compliance and preventing race conditions.
-* **AI Portfolio Analytics:** Users can ask the integrated Gemini AI assistant for portfolio breakdowns, risk estimation, and market suggestions based on their current holdings.
-* **Transaction Ledger:** Every transaction is logged in the database and displayed in the frontend with pagination support.
+> [!NOTE]
+> This project has been developed as part of the **i2i Academy Internship Program** as a paper-trading web application allowing users to simulate real-time cryptocurrency trading using a virtual USD balance, complete with generative AI market insights.
 
 ---
 
-## Architecture & Data Flow
+## 🏛️ Tech Stack
+
+The application is built on a high-performance, modular, and scalable architecture:
+
+- **Frontend:** React, Vite, JavaScript, Tailwind CSS, `i18next` (Internationalization), `react-markdown`
+- **Backend:** Java 21, Spring Boot 3 (Modular Monolith)
+- **Database & Migration:** PostgreSQL + Flyway (Database schema migration manager)
+- **Caching & Session Storage:** Redis (Stores user sessions and active live prices)
+- **Live Stream:** Native WebSockets (`/ws` endpoint using custom Spring `TextWebSocketHandler`)
+- **Generative AI:** Google Gemini API (Powering the conversational chatbot assistant and portfolio summary insights)
+
+---
+
+## 📊 Architecture & Data Flow
 
 The following diagram illustrates how live market data flows from Binance down to the PostgreSQL database and React frontend, alongside the transaction and chat execution paths:
 
 ```mermaid
 graph TD
-    Binance[Binance WebSocket Stream] -- Live Ticker Updates --> Backend[Spring Boot Backend]
+    %% Client Layer
+    subgraph Client ["Client (Browser / Frontend)"]
+        ViteApp["React Vite App"]
+    end
+
+    %% Server Layer
+    subgraph Server ["Server (VPS / Localhost)"]
+        Backend["Spring Boot Backend"]
+        AuthService["Auth Service"]
+        WSServer["Native WebSocket Server"]
+        GeminiClient["Gemini AI Client"]
+        TradeEngine["Trade Execution Engine"]
+        Redis["Redis Hash: market:prices"]
+        DB[(PostgreSQL Database)]
+    end
+
+    %% External Services
+    Binance["Binance WebSocket Stream"]
+
+    %% Data Flow Connections
+    Binance -- "Live Ticker Updates" --> Backend
+    Backend -- "1. Update Prices / Session State" --> Redis
+    AuthService -- "1. Update Prices / Session State" --> Redis
     
-    subgraph "Server (VPS / Localhost)"
-        Backend -- 1. Update Prices --> Redis[(Redis Hash: market:prices)]
-        Backend -- 2. Broadcast --> WS[Native WebSocket Server]
-        Backend -- 3. Periodic Snapshots --> DB[(PostgreSQL Database)]
-        
-        AuthService[Auth Service]
-        TradeService[Trade Execution Engine]
-        GeminiClient[Gemini AI Client]
-    end
-
-    subgraph "Client (Browser / Frontend)"
-        Frontend[React Vite App] -- 1. Initial State REST API --> Backend
-        Frontend -- 2. Subscribe wss:// --> WS
-        Frontend -- 3. Risk Query /chat --> GeminiClient
-        Frontend -- 4. Execute Trade /trades --> TradeService
-    end
-
-    TradeService -- Transaction Locks --> DB
-    AuthService -- Session State --> Redis
+    ViteApp -- "1. Initial State REST API" --> Backend
+    ViteApp -- "2. Subscribe ws://" --> WSServer
+    Backend -- "2. Broadcast" --> WSServer
+    
+    ViteApp -- "3. Risk Query /chat" --> GeminiClient
+    Backend -- "3. Periodic Snapshots" --> DB
+    
+    ViteApp -- "4. Execute Trade /trades" --> TradeEngine
+    TradeEngine -- "Transaction Locks" --> DB
 ```
 
-### Data Flow Execution:
-1. **Market Tickers:**
-   * The backend reads price data from the Binance WebSocket connection.
-   * Latest prices are written to a Redis hash (`market:prices`).
-   * Connected WebSocket clients receive the update payload immediately.
-   * A background scheduler (`TickerEngine`) writes snapshots of these prices to PostgreSQL every 15 seconds for historical analysis.
-2. **Order Execution:**
-   * When a buy or sell request is posted to `/api/trades`, the database record for the user's portfolio and asset rows are locked using `PESSIMISTIC_WRITE`.
-   * Checks for sufficient cash or asset quantity are run against live prices.
-   * If validated, balances are adjusted, the trade is logged, and the transaction commits, releasing the locks.
+### Flow Breakdown
+
+1. **Initial State (REST API):**
+   Upon startup, the **React Vite App** fetches the initial market prices and user authentication states from the **Spring Boot Backend** REST endpoints. Simultaneously, the backend pulls active market listings and prices directly from the Binance REST API.
+
+2. **Real-time Price Capture & Caching:**
+   The backend establishes a persistent connection to the external **Binance WebSocket Stream** to receive real-time ticker updates. The **Auth Service** and backend components continuously update the token price states and user sessions inside the **Redis Cache** (using the `market:prices` hash) to minimize database load.
+
+3. **WebSocket Broadcasting:**
+   The backend processes and broadcasts incoming price updates through the **Native WebSocket Server** (`/ws` endpoint). The frontend client opens a raw WebSocket connection to receive these real-time price updates immediately.
+
+4. **Gemini AI Market Assistant:**
+   User queries regarding portfolio health, historical performance, and contextual market analysis are sent to the **Gemini AI Client** via the `/api/chat/query` endpoint to get instant, context-aware financial advice.
+
+5. **Historical Snapshots:**
+   The backend periodically writes historical price snapshots from Redis into the **PostgreSQL Database** for charting and audit logs.
+
+6. **Pessimistic Trade Execution:**
+   When a user clicks "Execute Order", a trade request is sent to the **Trade Execution Engine**. The engine locks the user's wallet and asset rows in the **PostgreSQL Database** using a **pessimistic write lock** (`PESSIMISTIC_WRITE`) within a single transactional block to prevent race conditions or double-spending.
 
 ---
 
-## Database Schema
+## ✨ Key Features
 
-Database migrations are managed automatically via Flyway. The core tables are structured as follows:
+### 1. Dynamic Binance Integration & Live Streams 📈
+* **Dynamic Asset Listing:** At startup, the application fetches all active `USDT` trading pairs directly from the Binance REST API (`https://api.binance.com/api/v3/ticker/price`) to populate the system dynamically.
+* **WebSocket Price Stream:** Subscribes to the global Binance `!miniTicker@arr` WebSocket channel. Received price ticks are cached in Redis and streamed instantly to all connected clients via native WebSockets.
+* **Stream Health Monitoring (Stale Connection Detection):** If the WebSocket connection is interrupted, the system automatically detects the stale state and schedules reconnects every 5 seconds.
 
-### 1. `users`
-* `id` (UUID, Primary Key): Unique user ID.
-* `first_name` (VARCHAR): User first name.
-* `last_name` (VARCHAR): User last name.
-* `email` (VARCHAR, Unique): Login email address.
-* `password` (VARCHAR): BCrypt password hash.
+### 2. 30-Second Price Locking (Price Lock) ⏳
+* The moment a user opens the buy/sell trade modal, the active coin price is **locked for 30 seconds**.
+* A flashing countdown timer is displayed inside the modal indicating the remaining time.
+* Once the 30-second timer hits zero, the locked price expires, the **"Execute Order" button is automatically disabled**, and the user is notified that the price lock is no longer valid.
 
-### 2. `portfolio`
-* `id` (UUID, Primary Key): Portfolio ID.
-* `user_id` (UUID, Foreign Key): Reference to the owner.
-* `usd_balance` (NUMERIC): Available USD virtual cash (starts at $10,000.00).
+### 3. Favorites System & Status Dropdown 💖
+* Market cards feature heart toggle buttons in their top-right corner to add/remove coins from favorites. The state is persisted in `localStorage`.
+* A Heart button next to the profile icon in the header opens a dedicated **Favorites Dropdown Window** displaying live prices and percent changes for all favorited assets.
+* Clicking any favorited asset inside the dropdown immediately opens its trading modal.
+* The header heart icon utilizes a breathing/pulsing red dot badge instead of a raw counter for a premium aesthetic.
 
-### 3. `portfolio_assets`
-* `id` (UUID, Primary Key): Asset record ID.
-* `portfolio_id` (UUID, Foreign Key): Reference to the parent portfolio.
-* `symbol` (VARCHAR): Token symbol (e.g. `BTC`, `ETH`).
-* `quantity` (NUMERIC): Amount held.
-* `average_buy_price` (NUMERIC): Weighted average purchase cost.
+### 4. Gemini AI Chatbot Widget 🤖
+* A chat widget in the bottom-right corner integrates the Google Gemini API.
+* The assistant automatically analyzes the user's active portfolio allocation, trade transaction history, and current market feeds to provide contextual investment summaries and answers.
+* Supports rich Markdown formatting for all chat replies.
 
-### 4. `trades`
-* `id` (UUID, Primary Key): Log record ID.
-* `user_id` (UUID, Foreign Key): Reference to the trading user.
-* `symbol` (VARCHAR): Traded token symbol.
-* `side` (VARCHAR): Transaction direction (`BUY` or `SELL`).
-* `quantity` (NUMERIC): Amount of tokens traded.
-* `unit_price_usd` (NUMERIC): Execution price per unit.
-* `total_usd` (NUMERIC): Total transaction value in USD.
-* `executed_at` (TIMESTAMP): Execution timestamp.
+### 5. Multilingual Support (TR / EN i18n) 🌐
+* The application supports bilingual (Turkish and English) localization powered by `react-i18next`.
+* Language configuration can be swapped instantly within the Account Settings (Profile Modal) page.
 
-### 5. `price_snapshots`
-* `id` (BIGINT, Primary Key): Snapshot record ID.
-* `symbol` (VARCHAR): Token symbol.
-* `price_usd` (NUMERIC): Price at recording time.
-* `recorded_at` (TIMESTAMP): Recording timestamp.
+### 6. Premium Dark Glassmorphic Design 🎨
+* Curated dark color scheme matching the custom brand logo.
+* Premium micro-animations, glassmorphic card overlays, and clean layouts.
+* Login page features an infinite vertical scrolling marquee ticker showing 9 randomly selected coins from the live stream.
 
 ---
 
-## API Endpoints
+## 🗄️ Database Migrations (Flyway)
 
-All payload bodies use JSON. Authenticated endpoints require an `Authorization: Bearer <token>` header.
+The database schema is managed incrementally through Flyway migrations:
 
-### Authentication
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Registers a new user account. | No |
-| `POST` | `/api/auth/login` | Validates credentials and returns a UUID session token. | No |
-| `POST` | `/api/auth/logout` | Revokes the active session token. | Yes |
-
-### Market & Trading
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/market/prices` | Lists current prices for all supported tokens. | No |
-| `GET` | `/api/me` | Fetches the profile of the current authenticated user. | Yes |
-| `GET` | `/api/portfolio` | Retrieves USD balance and holding metrics. | Yes |
-| `POST` | `/api/trades` | Submits a virtual buy or sell order. | Yes |
-| `GET` | `/api/trades` | Fetches historical transactions. | Yes |
-| `POST` | `/api/chat/query` | Sends a prompt to the Gemini client for portfolio review. | Yes |
+| Version | Migration Purpose | Description |
+|---|---|---|
+| `V1__initial_schema.sql` | Base Schema | Creates User, Wallet, Portfolio Assets, and Trade Transactions tables. |
+| `V2__add_new_symbols.sql` | Symbol CHECK Constraints | Adds database-level constraints specifying supported asset symbols. |
+| `V3__remove_symbol_constraints.sql` | Dynamic Symbols Support | Removes the hardcoded CHECK constraints to allow dynamic Binance symbols. |
+| `V4__widen_symbol_column.sql` | Symbol Column Expansion | Widens the `symbol` columns to `VARCHAR(50)` to accommodate long Binance trade symbols. |
+| `V5__increase_price_precision.sql` | Decimal Precision Expansion | Expands column definitions (`price_usd` and `unit_price_usd`) to `NUMERIC(28,8)` to prevent rounding cheap assets (e.g. SHIB) to 0. |
 
 ---
 
-## Local Development Setup
+## ⚙️ Environment Variables
 
-### Prerequisites:
-* Docker & Docker Compose
-* Node.js v20+ & npm
+Copy the root `.env.example` file to `.env` and fill in your values.
 
-### Step 1: Configuration
-Copy the configuration template to `.env` and fill in your `GEMINI_API_KEY`:
-```bash
-cp .env.example .env
-```
-
-### Step 2: Spin Up Infrastructure & Backend
-Build and start the PostgreSQL database, Redis instance, and Spring Boot application:
-```bash
-docker compose up --build -d
-```
-* **Backend Host:** `http://localhost:8080`
-* **Swagger/OpenAPI UI:** `http://localhost:8080/swagger-ui.html`
-
-### Step 3: Run Frontend
-Open a new terminal session, navigate to the `frontend` directory, install packages, and start the Vite dev server:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-* **Frontend Host:** `http://localhost:5173`
+| Variable Name | Default Value | Description |
+|---|---|---|
+| `POSTGRES_DB` | `cryptflow` | PostgreSQL database name |
+| `POSTGRES_USER` | `cryptflow` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | `change-me` | PostgreSQL user password |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://postgres:5432/cryptflow` | JDBC datasource URL |
+| `SPRING_DATA_REDIS_HOST` | `redis` | Redis server hostname |
+| `SPRING_DATA_REDIS_PORT` | `6379` | Redis server port |
+| `SESSION_TTL_HOURS` | `24` | User session TTL in Redis (Hours) |
+| `FRONTEND_ORIGINS` | `http://localhost:5173` | Allowed CORS origins (comma-separated) |
+| `GEMINI_API_KEY` | *(Empty)* | Google Gemini API key |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | Active Gemini API model |
+| `TICKER_INTERVAL_MS` | `15000` | Price update loop interval (Milliseconds) |
 
 ---
 
-## VPS Deployment Guide
+## 🛠️ Installation and Setup
 
-Follow these steps to deploy CryptFlow to an Ubuntu server without interfering with existing services:
+### Full Containerized Setup (Recommended)
+Ensure Docker/Docker Compose and Node.js (v20+) are installed.
 
-### 1. Fetch Source Code:
-```bash
-cd /var/www
-git clone https://github.com/dkivrak/i2i-Systems-CryptFlow.git cryptflow
-cd cryptflow
-```
+1. Create your `.env` configuration file:
+   ```bash
+   cp .env.example .env
+   ```
 
-### 2. Run Database & Backend Services:
-```bash
-# Setup environment variables
-cp .env.example .env
+2. Spin up the backend, database, and caching servers:
+   ```bash
+   docker compose up -d --build
+   ```
+   *This starts Postgres, Redis, and the Spring Boot API, automatically applying all database schema migrations via Flyway.*
+   * **Backend API Base URL:** `http://localhost:8080`
+   * **Swagger UI Documentation:** `http://localhost:8080/swagger-ui.html`
 
-# Run compose build for backend, postgres, and redis
-docker compose build --no-cache
-docker compose up -d
-```
+3. Start the React frontend application:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev -- --port 5173
+   ```
+   * **Frontend Application URL:** `http://localhost:5173`
 
-### 3. Deploy Frontend using PM2:
-Build the static frontend assets and serve them via a lightweight static server managed by PM2:
-```bash
-cd frontend
-npm install
-npm run build
+---
 
-# Use serve package to host build folder on port 5173
-npm install -g serve
-npx pm2 start serve --name "cryptflow-frontend" -- build --port 5173 --single
-```
+## 🧪 Testing and Production Build
 
-### 4. Configure Nginx Reverse Proxy (Example):
-Create or update your server block config (e.g. under `/etc/nginx/sites-available/default`) to map requests to the frontend and backend ports:
+* **Run Backend Unit & Integration Tests:**
+  ```bash
+  cd backend
+  ./mvnw clean test
+  ```
 
-```nginx
-server {
-    listen 80;
-    server_name cryptflow.yourdomain.com; # Or your server's IP address
+* **Build Frontend for Production:**
+  ```bash
+  cd frontend
+  npm run build
+  ```
 
-    location / {
-        proxy_pass http://127.0.0.1:5173; # Frontend served by PM2
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
+---
 
-    location /api {
-        proxy_pass http://127.0.0.1:8080/api; # Backend REST API
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /ws {
-        proxy_pass http://127.0.0.1:8080/ws; # Native WebSocket connection
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-Test and reload Nginx:
-```bash
-nginx -t
-systemctl restart nginx
-```
-The application is now accessible in production.
+## 🔒 Security Notice
+Never commit local `.env` files, actual API keys, or PDFs containing sensitive project credentials to version control. These patterns are automatically excluded via `.gitignore`.
