@@ -101,6 +101,20 @@ body.light .bg-\[\#12243a\] {
   border-color: #cbd5e1 !important;
 }
 
+body.light .bg-\[\#0c1f33\] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#091725\] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
 body.light .bg-\[\#020617\]\/50 {
   background-color: #e2e8f0 !important;
   border-color: #cbd5e1 !important;
