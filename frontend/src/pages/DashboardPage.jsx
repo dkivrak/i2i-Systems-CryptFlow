@@ -496,72 +496,99 @@ export default function DashboardPage({ onLogout }) {
 }
 function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes, favorites, toggleFavorite }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 30;
 
-  const totalPages = Math.ceil(symbols.length / itemsPerPage);
+  const filteredSymbols = symbols.filter(s =>
+    s.toLowerCase().includes(searchQuery.trim().toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredSymbols.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedSymbols = symbols.slice(startIndex, startIndex + itemsPerPage);
+  const displayedSymbols = filteredSymbols.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [symbols.length]);
+  }, [symbols.length, searchQuery]);
 
   return (
     <div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {displayedSymbols.map((s, i) => {
-          const asset = portfolio?.assets?.find(a => a.symbol === s);
-          const globalIndex = startIndex + i;
-          const isFav = favorites.includes(s);
-          return (
-            <div
-              key={s}
-              onClick={() => onTrade({ symbol: s, side: 'BUY' })}
-              className="card group relative rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50 cursor-pointer"
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFavorite(s);
-                }}
-                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
-                title={isFav ? t('dashboard.removeFavorite') : t('dashboard.addFavorite')}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill={isFav ? "#ff4b6e" : "none"}
-                  stroke={isFav ? "#ff4b6e" : "currentColor"}
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-5 h-5"
-                >
-                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                </svg>
-              </button>
-              <div className="flex items-center justify-between">
-                <CoinLogo symbol={s} index={globalIndex} />
-              </div>
-              <p className="mt-6 label">{s} / USD</p>
-              <div className="mt-1 flex items-baseline justify-between">
-                <p className="text-3xl font-black">{money(market?.prices?.[s])}</p>
-                {changes?.[s] !== undefined && (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    changes[s] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                  }`}>
-                    {changes[s] >= 0 ? '+' : ''}{changes[s].toFixed(2)}%
-                  </span>
-                )}
-              </div>
-              <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
-                {t('dashboard.holding')}{' '}
-                <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
-              </div>
-            </div>
-          );
-        })}
+      {/* Search Bar */}
+      <div className="mb-6 max-w-md relative">
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+        </div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder={t('dashboard.searchPlaceholder')}
+          className="input pl-11 w-full"
+        />
       </div>
+
+      {displayedSymbols.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {displayedSymbols.map((s, i) => {
+            const asset = portfolio?.assets?.find(a => a.symbol === s);
+            const globalIndex = startIndex + i;
+            const isFav = favorites.includes(s);
+            return (
+              <div
+                key={s}
+                onClick={() => onTrade({ symbol: s, side: 'BUY' })}
+                className="card group relative rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50 cursor-pointer"
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(s);
+                  }}
+                  className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
+                  title={isFav ? t('dashboard.removeFavorite') : t('dashboard.addFavorite')}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill={isFav ? "#ff4b6e" : "none"}
+                    stroke={isFav ? "#ff4b6e" : "currentColor"}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5"
+                  >
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                  </svg>
+                </button>
+                <div className="flex items-center justify-between">
+                  <CoinLogo symbol={s} index={globalIndex} />
+                </div>
+                <p className="mt-6 label">{s} / USD</p>
+                <div className="mt-1 flex items-baseline justify-between">
+                  <p className="text-3xl font-black">{money(market?.prices?.[s])}</p>
+                  {changes?.[s] !== undefined && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      changes[s] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                    }`}>
+                      {changes[s] >= 0 ? '+' : ''}{changes[s].toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+                <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
+                  {t('dashboard.holding')}{' '}
+                  <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="card rounded-2xl p-10 text-center text-slate-500">
+          {t('dashboard.noCoinsFound', { defaultValue: 'No coins found matching your search.' })}
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">

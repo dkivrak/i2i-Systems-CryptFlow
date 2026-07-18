@@ -88,7 +88,8 @@ const resources = {
         nextPage: 'Next',
         hoverChart: 'Inspect Allocation',
         hoverDesc: 'Hover over segments to view details.',
-        allocation: 'allocation'
+        allocation: 'allocation',
+        searchPlaceholder: 'Search coin... (e.g. BTC, SOL)'
       },
 
       // --- Chat Widget ---
@@ -261,7 +262,8 @@ const resources = {
         nextPage: 'İleri',
         hoverChart: 'Dağılımı İncele',
         hoverDesc: 'Grafik dilimlerinin üzerine gelerek detayları görün.',
-        allocation: 'oranında'
+        allocation: 'oranında',
+        searchPlaceholder: 'Coin ara... (örn: BTC, SOL)'
       },
 
       // --- Chat Widget ---
