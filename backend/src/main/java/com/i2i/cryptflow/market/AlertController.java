@@ -51,7 +51,8 @@ public class AlertController {
         alert.getTargetPrice(),
         alert.getCondition(),
         alert.isTriggered(),
-        alert.getCreatedAt()
+        alert.getCreatedAt(),
+        alert.getTriggeredAt()
     );
   }
 
@@ -67,6 +68,7 @@ public class AlertController {
       BigDecimal targetPrice,
       String condition,
       boolean isTriggered,
-      Instant createdAt
+      Instant createdAt,
+      Instant triggeredAt
   ) {}
 }

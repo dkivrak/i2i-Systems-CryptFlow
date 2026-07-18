@@ -59,6 +59,8 @@ public class AlertService {
 
       if (trigger) {
         alert.setTriggered(true);
+        alert.setTriggeredAt(java.time.Instant.now());
+        alerts.save(alert);
       }
     }
   }

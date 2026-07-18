@@ -31,6 +31,9 @@ public class PriceAlert {
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
+  @Column(name = "triggered_at")
+  private Instant triggeredAt;
+
   protected PriceAlert() {}
 
   public PriceAlert(User user, String symbol, BigDecimal targetPrice, String condition) {
@@ -41,6 +44,7 @@ public class PriceAlert {
     this.condition = condition;
     this.isTriggered = false;
     this.createdAt = Instant.now();
+    this.triggeredAt = null;
   }
 
   public UUID getId() { return id; }
@@ -51,4 +55,6 @@ public class PriceAlert {
   public boolean isTriggered() { return isTriggered; }
   public void setTriggered(boolean triggered) { isTriggered = triggered; }
   public Instant getCreatedAt() { return createdAt; }
+  public Instant getTriggeredAt() { return triggeredAt; }
+  public void setTriggeredAt(Instant triggeredAt) { this.triggeredAt = triggeredAt; }
 }

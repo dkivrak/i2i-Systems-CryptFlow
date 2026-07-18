@@ -94,7 +94,8 @@ export default function DashboardPage({ onLogout }) {
   const cachedTimeVal = localStorage.getItem('cryptflow_daily_summary_time') || '0';
   const hasUnreadSummary = dailySummary && Number(lastReadTimeVal) < Number(cachedTimeVal);
   const unreadAlertsCount = topTriggeredAlerts.filter(a => {
-    return new Date(a.createdAt).getTime() > Number(lastReadTimeVal);
+    const triggerTime = a.triggeredAt ? new Date(a.triggeredAt).getTime() : new Date(a.createdAt).getTime();
+    return triggerTime > Number(lastReadTimeVal);
   }).length;
   const totalUnreadCount = (hasUnreadSummary ? 1 : 0) + unreadAlertsCount;
 
