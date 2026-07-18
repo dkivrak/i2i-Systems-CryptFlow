@@ -32,6 +32,38 @@ export default function DashboardPage({ onLogout }) {
   const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
   const [dailySummary, setDailySummary] = useState('');
 
+  const [showFavoritesDropdown, setShowFavoritesDropdown] = useState(false);
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cryptflow_favorites');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cryptflow_favorites', JSON.stringify(favorites));
+    } catch (storageError) {
+      console.error('Failed to save favorites to localStorage', storageError);
+    }
+  }, [favorites]);
+
+  const toggleFavorite = (symbol) => {
+    setFavorites(prev =>
+      prev.includes(symbol)
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol]
+    );
+  };
+
+  const toggleFavoritesDropdown = () => {
+    setShowFavoritesDropdown(prev => !prev);
+    setShowNotifications(false);
+  };
+
   const currentLang = i18n.language;
 
   useEffect(() => {
@@ -85,6 +117,7 @@ export default function DashboardPage({ onLogout }) {
   }, [tab]);
 
   const openNotifications = () => {
+    setShowFavoritesDropdown(false);
     setShowNotifications(prev => {
       const next = !prev;
       if (next) {
@@ -126,7 +159,7 @@ export default function DashboardPage({ onLogout }) {
     }
   }
 
-  if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1fc8a4] border-t-transparent" /></div>;
+  if (loading) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 animate-spin rounded-full border-2 border-[#00d8f6] border-t-transparent" /></div>;
   const liveTotalCryptoValue = portfolio?.assets?.reduce((sum, a) => {
     const livePrice = Number(market?.prices?.[a.symbol] || 0);
     return sum + (livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0));
@@ -161,9 +194,9 @@ export default function DashboardPage({ onLogout }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111f]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#1fc8a4] shadow-[0_0_18px_#1fc8a4]" />
-            <span className="font-black tracking-tight">CRYPTFLOW</span>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-10 w-10 object-contain" />
+            <span className="font-black tracking-tight text-lg text-gradient">CRYPTFLOW</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-6">
             {/* Language flags */}
@@ -172,7 +205,7 @@ export default function DashboardPage({ onLogout }) {
                 onClick={() => changeAppLanguage('en')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'en'
-                    ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
+                    ? 'ring-2 ring-[#00d8f6] ring-offset-2 ring-offset-[#040a15] opacity-100'
                     : 'opacity-40 hover:opacity-80'
                 } rounded-full`}
                 title="English"
@@ -190,7 +223,7 @@ export default function DashboardPage({ onLogout }) {
                 onClick={() => changeAppLanguage('tr')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
                   currentLang === 'tr'
-                    ? 'ring-2 ring-[#1fc8a4] ring-offset-2 ring-offset-[#07111f] opacity-100'
+                    ? 'ring-2 ring-[#00d8f6] ring-offset-2 ring-offset-[#040a15] opacity-100'
                     : 'opacity-40 hover:opacity-80'
                 } rounded-full`}
                 title="Türkçe"
@@ -211,8 +244,8 @@ export default function DashboardPage({ onLogout }) {
             <div className="relative">
               <button
                 onClick={openNotifications}
-                className="text-slate-400 hover:text-[#1fc8a4] transition-colors relative flex items-center"
-                aria-label="Notifications"
+                className="text-slate-400 hover:text-[#00d8f6] transition-colors relative flex items-center"
+                aria-label={t('dashboard.notifications')}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -236,7 +269,7 @@ export default function DashboardPage({ onLogout }) {
                     <div className="space-y-3">
                       <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
                         <div className="flex gap-2">
-                          <span className="text-[#1fc8a4] text-xs">✦</span>
+                          <span className="text-[#00d8f6] text-xs">✦</span>
                           <div>
                             <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle')}</p>
                             <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
@@ -247,7 +280,7 @@ export default function DashboardPage({ onLogout }) {
                             setTab('portfolio');
                             setShowNotifications(false);
                           }}
-                          className="mt-3 w-full rounded-lg bg-[#1fc8a4]/10 py-1.5 text-center text-xs font-bold text-[#1fc8a4] hover:bg-[#1fc8a4]/20 transition"
+                          className="mt-3 w-full rounded-lg bg-[#00d8f6]/10 py-1.5 text-center text-xs font-bold text-[#00d8f6] hover:bg-[#00d8f6]/20 transition"
                         >
                           {t('dashboard.goToPortfolio')}
                         </button>
@@ -260,10 +293,84 @@ export default function DashboardPage({ onLogout }) {
               )}
             </div>
 
+            {/* Favorites Dropdown Toggle */}
+            <div className="relative">
+              <button
+                onClick={toggleFavoritesDropdown}
+                className="text-slate-400 hover:text-[#ff4b6e] transition-colors relative flex items-center"
+                aria-label={t('dashboard.favorites')}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill={favorites.length > 0 ? "#ff4b6e" : "none"}
+                  stroke={favorites.length > 0 ? "#ff4b6e" : "currentColor"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-[22px] h-[22px]"
+                >
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+                {favorites.length > 0 && (
+                  <span className="absolute top-0.5 right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                )}
+              </button>
+
+              {showFavoritesDropdown && (
+                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites')}
+                    </h3>
+                    <button onClick={() => setShowFavoritesDropdown(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
+                  </div>
+                  {favorites.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {favorites.map(s => {
+                        const price = market?.prices?.[s];
+                        const change = changes?.[s];
+                        return (
+                          <div
+                            key={s}
+                            onClick={() => {
+                              setModal({ symbol: s, side: 'BUY' });
+                              setShowFavoritesDropdown(false);
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white">{s}</span>
+                              <span className="text-[10px] text-slate-400">/ USD</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-bold text-white block">{price ? money(price) : '...'}</span>
+                              {change !== undefined && (
+                                <span className={`text-[10px] font-bold ${change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'}`}>
+                                  {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 py-4">
+                      {t('dashboard.noFavorites')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setShowProfile(true)}
-              className="text-slate-400 hover:text-[#1fc8a4] transition-colors"
-              aria-label="Profile"
+              className="text-slate-400 hover:text-[#00d8f6] transition-colors"
+              aria-label={t('profile.myProfile')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -281,7 +388,7 @@ export default function DashboardPage({ onLogout }) {
           <p className="label">{t('dashboard.portfolioOverview')}</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
             {t('dashboard.hello')}{' '}
-            <span className="text-[#1fc8a4]">
+            <span className="text-gradient">
               {sessionStorage.getItem('cryptflow_firstName') && sessionStorage.getItem('cryptflow_lastName')
                 ? `${sessionStorage.getItem('cryptflow_firstName')} ${sessionStorage.getItem('cryptflow_lastName')}`
                 : me?.email?.split('@')[0]}
@@ -336,7 +443,7 @@ export default function DashboardPage({ onLogout }) {
               key={id}
               onClick={() => setTab(id)}
               className={`whitespace-nowrap border-b-2 px-5 py-3 text-sm font-bold ${
-                tab === id ? 'border-[#1fc8a4] text-white' : 'border-transparent text-slate-500'
+                tab === id ? 'border-[#00d8f6] text-[#00d8f6]' : 'border-transparent text-slate-500'
               }`}
             >
               {label}
@@ -345,13 +452,26 @@ export default function DashboardPage({ onLogout }) {
         </nav>
 
         {/* Tab Content */}
-        {tab === 'market' && <MarketPanel market={market} portfolio={portfolio} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} onTrade={setModal} t={t} dateLocale={dateLocale} changes={changes} />}
+        {tab === 'market' && (
+          <MarketPanel
+            market={market}
+            portfolio={portfolio}
+            symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS}
+            onTrade={setModal}
+            t={t}
+            dateLocale={dateLocale}
+            changes={changes}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+          />
+        )}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
       </main>
 
       {modal && (
         <TradeModal
+          key={`${modal.symbol}|${modal.side}|${Boolean(modal.isSellOnly)}`}
           symbol={modal.symbol}
           side={modal.side}
           isSellOnly={modal.isSellOnly}
@@ -374,8 +494,7 @@ export default function DashboardPage({ onLogout }) {
     </div>
   );
 }
-
-function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes }) {
+function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes, favorites, toggleFavorite }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
@@ -393,15 +512,36 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
         {displayedSymbols.map((s, i) => {
           const asset = portfolio?.assets?.find(a => a.symbol === s);
           const globalIndex = startIndex + i;
+          const isFav = favorites.includes(s);
           return (
-            <button
+            <div
               key={s}
               onClick={() => onTrade({ symbol: s, side: 'BUY' })}
-              className="card group rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#1fc8a4]/50"
+              className="card group relative rounded-2xl p-6 text-left transition hover:-translate-y-1 hover:border-[#00d8f6]/50 cursor-pointer"
             >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(s);
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
+                title={isFav ? t('dashboard.removeFavorite') : t('dashboard.addFavorite')}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill={isFav ? "#ff4b6e" : "none"}
+                  stroke={isFav ? "#ff4b6e" : "currentColor"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-5 h-5"
+                >
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+              </button>
               <div className="flex items-center justify-between">
                 <CoinLogo symbol={s} index={globalIndex} />
-                <span className="text-xs text-slate-600">{t('dashboard.trade')}</span>
               </div>
               <p className="mt-6 label">{s} / USD</p>
               <div className="mt-1 flex items-baseline justify-between">
@@ -418,7 +558,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                 {t('dashboard.holding')}{' '}
                 <span className="float-right text-white">{coin(asset?.quantity)} {s}</span>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -434,7 +574,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
-              aria-label="Previous Page"
+              aria-label={t('dashboard.prevPage')}
             >
               ←
             </button>
@@ -445,7 +585,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
-              aria-label="Next Page"
+              aria-label={t('dashboard.nextPage')}
             >
               →
             </button>
@@ -737,7 +877,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
                 <span className={`h-2.5 w-2.5 rounded-full ${hoveredAsset.bgClass}`} />
                 <span className="font-bold text-white text-sm">{hoveredAsset.symbol}</span>
               </div>
-              <p className="mt-1 text-base font-black text-[#1fc8a4]">
+              <p className="mt-1 text-base font-black text-[#00d8f6]">
                 {money(hoveredAsset.value)}
               </p>
               <p className="text-[10px] text-slate-500">
@@ -794,5 +934,3 @@ function CoinLogo({ symbol }) {
     />
   );
 }
-
-

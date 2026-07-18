@@ -20,6 +20,7 @@ vi.mock('react-i18next', () => ({
         'trade.insufficientUsd': 'Bu işlem için yeterli USD bakiyeniz yok.',
         'trade.insufficientAssetSimple': 'Satış için yeterli varlık bakiyeniz yok.',
         'trade.invalidAmount': 'Miktar en fazla 8 ondalık basamaklı pozitif bir sayı olmalıdır.',
+        'trade.minimumOrderValue': 'Toplam işlem tutarı en az $0.01 olmalıdır.',
         'trade.processingOrder': 'Emir işleniyor…',
         'trade.executeOrder': 'Emri gerçekleştir',
         'trade.available': 'Mevcut:',
@@ -108,6 +109,60 @@ describe('TradeModal', () => {
     expect(screen.getByRole('alert').textContent).toContain('yeterli varlık bakiyeniz yok')
     expect(screen.getByRole('button', { name: 'Emri gerçekleştir' }).disabled).toBe(true)
     expect(api).not.toHaveBeenCalled()
+  })
+
+  it('blocks approval if the market becomes stale during confirmation', () => {
+    const rendered = renderModal()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+
+    rendered.rerender(<TradeModal {...baseProps} priceStatus="stale" />)
+
+    const approveButton = screen.getByRole('button', { name: 'Evet, Onayla' })
+    expect(screen.getByRole('alert').textContent).toBe('Fiyat verisi güncel değil.')
+    expect(approveButton.disabled).toBe(true)
+    fireEvent.click(approveButton)
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('keeps sell-only orders on the sell side even if a caller passes buy', async () => {
+    api.mockResolvedValueOnce({
+      symbol: 'BTC',
+      side: 'SELL',
+      quantity: '0.5',
+      unitPriceUsd: '50000',
+      totalUsd: '25000',
+    })
+    renderModal({ side: 'BUY', isSellOnly: true })
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, Onayla' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(api).toHaveBeenCalledWith('/trades', {
+      method: 'POST',
+      body: JSON.stringify({ symbol: 'BTC', side: 'SELL', quantity: '0.5' }),
+    })
+  })
+
+  it('translates the backend minimum-order validation message', async () => {
+    api.mockRejectedValueOnce(new Error('Total order value must be at least $0.01.'))
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.00000001' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, Onayla' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('alert').textContent).toBe('Toplam işlem tutarı en az $0.01 olmalıdır.')
   })
 
   it('clears loading after an API failure and clears the request error when input changes', async () => {
