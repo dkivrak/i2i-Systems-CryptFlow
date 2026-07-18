@@ -6,7 +6,7 @@ CryptFlow is a paper-trading web application that integrates real-time market da
 
 ## Features
 
-* **Binance WebSocket Integration:** The backend connects to the Binance WebSocket stream (`!miniTicker@arr`) to track over 620 USDT trading pairs, updating prices in memory within milliseconds.
+* **Binance WebSocket Integration:** The backend connects to the Binance WebSocket stream (`!miniTicker@arr`) to track over 620 USDT trading pairs, updating prices in memory within milliseconds. The data ingestion layer is fully decoupled from the core business logic using the `ExternalPriceProvider` Java interface, conforming strictly to section 5.3 specifications.
 * **Real-time Price Stream:** The React frontend connects to the backend via a native WebSocket connection to receive live price updates. Price shifts are highlighted in the UI using clean visual change animations.
 * **Reliable Token Logos:** Logos are loaded from a primary GitHub cryptocurrency icon repository, falling back automatically to the CoinCap API if a token is not found, before defaulting to a gradient letter avatar.
 * **Safe Trade Execution:** Balances and asset holdings are locked using Database Pessimistic Write Locks within a single transaction, ensuring ACID compliance and preventing race conditions.
