@@ -403,7 +403,7 @@ export default function DashboardPage({ onLogout }) {
                 <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-80 z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
                     <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                      <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites')}
+                      {t('dashboard.favorites')}
                     </h3>
                     <button onClick={() => setShowFavoritesDropdown(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
                   </div>
