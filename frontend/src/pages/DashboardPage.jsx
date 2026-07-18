@@ -193,14 +193,14 @@ export default function DashboardPage({ onLogout }) {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111f]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="CryptFlow Logo" className="h-10 w-10 object-contain" />
-            <span className="font-black tracking-tight text-lg text-gradient">CRYPTFLOW</span>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3 sm:px-5 py-4">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-9 w-9 object-contain" />
+            <span className="font-black tracking-tight text-lg text-gradient hidden sm:inline">CRYPTFLOW</span>
           </div>
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2.5 sm:gap-6">
             {/* Language flags */}
-            <div className="flex items-center gap-2 border-r border-white/10 pr-4 sm:pr-6">
+            <div className="flex items-center gap-1.5 sm:gap-2 border-r border-white/10 pr-2 sm:pr-6">
               <button
                 onClick={() => changeAppLanguage('en')}
                 className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
@@ -386,7 +386,7 @@ export default function DashboardPage({ onLogout }) {
         {/* Welcome Header */}
         <section className="mb-6">
           <p className="label">{t('dashboard.portfolioOverview')}</p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
+          <h1 className="mt-2 text-2xl sm:text-4xl font-black tracking-[-.04em]">
             {t('dashboard.hello')}{' '}
             <span className="text-gradient">
               {sessionStorage.getItem('cryptflow_firstName') && sessionStorage.getItem('cryptflow_lastName')
@@ -658,13 +658,13 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
                 const livePrice = Number(market?.prices?.[a.symbol] || 0);
                 const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
                 return (
-                  <div key={a.symbol} className="grid grid-cols-[1fr_1.2fr_1.2fr_1fr] border-b border-white/5 px-6 py-4 last:border-0 items-center gap-2">
-                    <b className="text-sm">{a.symbol}</b>
-                    <span className="text-right text-sm text-slate-400">{coin(a.quantity)}</span>
-                    <div className="text-right flex items-center justify-end gap-2.5">
-                      <span className="text-sm font-bold text-white">{money(liveValue)}</span>
+                  <div key={a.symbol} className="grid grid-cols-[1fr_1.1fr_1.3fr_0.9fr] border-b border-white/5 px-3 sm:px-6 py-3.5 sm:py-4 last:border-0 items-center gap-1.5 sm:gap-2">
+                    <b className="text-xs sm:text-sm">{a.symbol}</b>
+                    <span className="text-right text-xs sm:text-sm text-slate-400 truncate">{coin(a.quantity)}</span>
+                    <div className="text-right flex flex-col sm:flex-row items-end sm:items-center justify-end gap-1 sm:gap-2.5 min-w-0">
+                      <span className="text-xs sm:text-sm font-bold text-white truncate">{money(liveValue)}</span>
                       {changes?.[a.symbol] !== undefined && (
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded leading-none shrink-0 ${
                           changes[a.symbol] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
                         }`}>
                           {changes[a.symbol] >= 0 ? '+' : ''}{changes[a.symbol].toFixed(2)}%
@@ -674,7 +674,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
                     <div className="text-right">
                       <button
                         onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
-                        className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
+                        className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
                       >
                         {t('trade.sell')}
                       </button>

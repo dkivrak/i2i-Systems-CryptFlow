@@ -23,16 +23,24 @@ h1, h2, h3, h4, .font-black {
   font-family: 'Outfit', sans-serif;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background:
     radial-gradient(circle at 10% 20%, rgba(0, 216, 246, 0.08), transparent 45%),
     radial-gradient(circle at 90% 10%, rgba(16, 217, 142, 0.08), transparent 45%),
     radial-gradient(circle at 50% 90%, rgba(255, 75, 110, 0.05), transparent 50%),
     #040a15;
-  background-attachment: fixed;
+  pointer-events: none;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #040a15;
 }
 
 button, input {
