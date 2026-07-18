@@ -5,48 +5,75 @@ import { normalizeQuantityInput } from '../features/trades/quantityInput'
 import { validateTrade } from '../features/trades/tradeValidation'
 import { money } from '../utils/format'
 
+const PRICE_LOCK_SECONDS = 30
+const PRICE_LOCK_DURATION_MS = PRICE_LOCK_SECONDS * 1000
+
+function getLockablePrice(livePrice, priceStatus) {
+  const price = Number(livePrice)
+  return priceStatus === 'live' && Number.isFinite(price) && price > 0 ? price : null
+}
+
 export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOnly = false, changePercent, livePrice, priceStatus, portfolio, onClose, onComplete }) {
-  const { t, i18n } = useTranslation()
-  const [side, setSide] = useState(initialSide)
+  const { t } = useTranslation()
+  const [side, setSide] = useState(isSellOnly ? 'SELL' : initialSide)
   const [quantity, setQuantity] = useState('')
   const [busy, setBusy] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [result, setResult] = useState(null)
   const [showApproveStep, setShowApproveStep] = useState(false)
-
-  // Price lock logic: 30 seconds price lock on mount
   const [lockedPrice, setLockedPrice] = useState(null)
-  const [timeLeft, setTimeLeft] = useState(30)
+  const [timeLeft, setTimeLeft] = useState(PRICE_LOCK_SECONDS)
+  const lockDeadlineRef = useRef(null)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
-    if (lockedPrice === null && livePrice !== undefined && livePrice !== null) {
-      setLockedPrice(Number(livePrice))
+    if (lockedPrice !== null) return
+
+    const nextPrice = getLockablePrice(livePrice, priceStatus)
+    if (nextPrice !== null) {
+      lockDeadlineRef.current = Date.now() + PRICE_LOCK_DURATION_MS
+      setLockedPrice(nextPrice)
+      setTimeLeft(PRICE_LOCK_SECONDS)
     }
-  }, [livePrice, lockedPrice])
+  }, [livePrice, lockedPrice, priceStatus])
 
   useEffect(() => {
-    if (timeLeft <= 0) return
+    if (lockedPrice === null || lockDeadlineRef.current === null || result) return
+
     const interval = setInterval(() => {
-      setTimeLeft(prev => prev - 1)
+      const remainingSeconds = Math.max(0, Math.ceil((lockDeadlineRef.current - Date.now()) / 1000))
+      setTimeLeft(remainingSeconds)
+      if (remainingSeconds === 0) clearInterval(interval)
     }, 1000)
+
     return () => clearInterval(interval)
-  }, [timeLeft])
+  }, [lockedPrice, result])
 
-  const activePrice = (timeLeft > 0 && lockedPrice !== null) ? lockedPrice : Number(livePrice)
-
-  const contextKey = `${symbol}|${side}|${quantity}|${activePrice}|${priceStatus}`
+  const priceLockExpired = lockedPrice !== null && timeLeft <= 0
+  const activePrice = lockedPrice ?? Number(livePrice)
+  const contextKey = `${symbol}|${side}|${quantity}`
   const latestContextRef = useRef(contextKey)
   latestContextRef.current = contextKey
   const validationError = validateTrade({ quantity, side, symbol, livePrice: activePrice, priceStatus, portfolio })
   const numericPrice = activePrice
   const hasFreshPrice = priceStatus === 'live' && Number.isFinite(numericPrice) && numericPrice > 0
 
-  const displayedError = requestError || (quantity !== '' && validationError ? t(validationError) : '')
+  const displayedError = priceLockExpired
+    ? t('trade.priceLockExpired')
+    : requestError || (quantity !== '' && validationError ? t(validationError) : '')
   const unavailablePriceMessage = priceStatus === 'stale' ? 'trade.priceStale' : 'trade.priceUnavailable'
+  const lockCountdownMessage = lockedPrice !== null && !priceLockExpired
+    ? t('trade.priceLockCountdown', { seconds: timeLeft })
+    : ''
 
-  useEffect(() => {
-    setRequestError('')
-  }, [symbol, activePrice, priceStatus])
+  function isPriceLockExpiredNow() {
+    const deadlineExpired = lockedPrice !== null &&
+      lockDeadlineRef.current !== null &&
+      Date.now() >= lockDeadlineRef.current
+    const expired = priceLockExpired || deadlineExpired
+    if (expired && timeLeft !== 0) setTimeLeft(0)
+    return expired
+  }
 
   const numericQuantity = parseFloat(quantity) || 0
   const estimatedTotal = numericQuantity * numericPrice
@@ -70,6 +97,10 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
   function handleFormSubmit(event) {
     event.preventDefault()
     setRequestError('')
+    if (isPriceLockExpiredNow()) {
+      setRequestError(t('trade.priceLockExpired'))
+      return
+    }
     if (validationError) {
       setRequestError(t(validationError))
       return
@@ -79,7 +110,18 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
   async function executeTrade() {
     setRequestError('')
+    if (isPriceLockExpiredNow()) {
+      setRequestError(t('trade.priceLockExpired'))
+      return
+    }
+    if (validationError) {
+      setRequestError(t(validationError))
+      return
+    }
+    if (submittingRef.current) return
+
     const submittedContext = contextKey
+    submittingRef.current = true
     setBusy(true)
     try {
       const res = await api('/trades', { method: 'POST', body: JSON.stringify({ symbol, side, quantity }) })
@@ -96,6 +138,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
       }
       setShowApproveStep(false)
     } finally {
+      submittingRef.current = false
       setBusy(false)
     }
   }
@@ -193,6 +236,8 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
             </div>
           </div>
 
+          {lockCountdownMessage && <p className="text-center text-xs font-medium text-[#00d8f6]">{lockCountdownMessage}</p>}
+
           {displayedError && <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{displayedError}</p>}
 
           {/* Buttons */}
@@ -200,10 +245,14 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
             <button
               type="button"
               onClick={executeTrade}
-              disabled={busy}
+              disabled={busy || Boolean(validationError) || priceLockExpired}
               className="btn btn-primary flex-1 py-3"
             >
-              {busy ? t('trade.processingOrder') : t('trade.approveOrder')}
+              {busy
+                ? t('trade.processingOrder')
+                : priceLockExpired
+                  ? t('trade.priceLockExpiredButton')
+                  : t('trade.approveOrder')}
             </button>
             <button
               type="button"
@@ -224,7 +273,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
       <div role="dialog" aria-modal="true" aria-label={t('trade.symbolTransaction', { symbol })} className="card w-full max-w-md rounded-3xl p-7 animate-in">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
-            <CoinLogo symbol={symbol} index={symbol === 'BTC' ? 0 : symbol === 'ETH' ? 1 : 2} />
+            <CoinLogo symbol={symbol} />
             <div>
               <p className="label text-[10px] tracking-wider">{t('trade.newOrder')}</p>
               <div className="flex items-baseline gap-2 mt-0.5">
@@ -263,9 +312,9 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
           <label htmlFor="trade-quantity" className="text-sm text-slate-300">{t('trade.coinQuantity')}</label>
           <div className="mt-2 text-sm text-slate-400 flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
-              {hasFreshPrice ? (
+              {lockedPrice !== null || hasFreshPrice ? (
                 <>
-                  <span>{timeLeft > 0 && lockedPrice !== null ? t('trade.lockedPrice') : t('trade.livePrice')}: <span className="text-white font-bold">{money(numericPrice)}</span></span>
+                  <span>{lockedPrice !== null ? t('trade.lockedPrice') : t('trade.livePrice')}: <span className="text-white font-bold">{money(numericPrice)}</span></span>
                   {changePercent !== undefined && (
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                       changePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
@@ -278,17 +327,10 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
                 t(unavailablePriceMessage)
               )}
             </div>
-            {timeLeft > 0 && lockedPrice !== null && (
-              <p className="text-[11px] text-[#00d8f6] font-medium flex items-center gap-1.5 mt-0.5">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00d8f6] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#00d8f6]"></span>
-                </span>
-                {i18n.language?.startsWith('tr')
-                  ? `Fiyat 30 saniyeliğine kilitlendi. Geri sayım: ${timeLeft}s`
-                  : `Price locked for 30s. Countdown: ${timeLeft}s`}
-              </p>
+            {lockedPrice !== null && priceStatus !== 'live' && (
+              <span className="text-[11px] font-medium text-amber-300">{t(unavailablePriceMessage)}</span>
             )}
+            {lockCountdownMessage && <p className="text-[11px] font-medium text-[#00d8f6]">{lockCountdownMessage}</p>}
           </div>
           <div className="relative mt-2">
             <input
@@ -324,11 +366,11 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
           {displayedError && <p role="alert" className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{displayedError}</p>}
           
-          <button disabled={busy || Boolean(validationError) || timeLeft <= 0} className="btn btn-primary mt-6 w-full disabled:opacity-50 disabled:cursor-not-allowed">
-            {busy 
-              ? t('trade.processingOrder') 
-              : timeLeft <= 0 
-                ? (i18n.language?.startsWith('tr') ? 'Süre Doldu (Fiyat Kilidi Geçersiz)' : 'Time Expired (Price Lock Invalid)')
+          <button disabled={busy || Boolean(validationError) || priceLockExpired} className="btn btn-primary mt-6 w-full disabled:opacity-50 disabled:cursor-not-allowed">
+            {busy
+              ? t('trade.processingOrder')
+              : priceLockExpired
+                ? t('trade.priceLockExpiredButton')
                 : t('trade.executeOrder')}
           </button>
         </form>

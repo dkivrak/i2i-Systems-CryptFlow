@@ -36,14 +36,19 @@ export default function DashboardPage({ onLogout }) {
   const [favorites, setFavorites] = useState(() => {
     try {
       const saved = localStorage.getItem('cryptflow_favorites');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
   });
 
   useEffect(() => {
-    localStorage.setItem('cryptflow_favorites', JSON.stringify(favorites));
+    try {
+      localStorage.setItem('cryptflow_favorites', JSON.stringify(favorites));
+    } catch (storageError) {
+      console.error('Failed to save favorites to localStorage', storageError);
+    }
   }, [favorites]);
 
   const toggleFavorite = (symbol) => {
@@ -240,7 +245,7 @@ export default function DashboardPage({ onLogout }) {
               <button
                 onClick={openNotifications}
                 className="text-slate-400 hover:text-[#00d8f6] transition-colors relative flex items-center"
-                aria-label="Notifications"
+                aria-label={t('dashboard.notifications')}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -293,7 +298,7 @@ export default function DashboardPage({ onLogout }) {
               <button
                 onClick={toggleFavoritesDropdown}
                 className="text-slate-400 hover:text-[#ff4b6e] transition-colors relative flex items-center"
-                aria-label="Favorites"
+                aria-label={t('dashboard.favorites')}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -319,9 +324,9 @@ export default function DashboardPage({ onLogout }) {
                 <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
                     <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                      <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites', 'Favorites')}
+                      <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites')}
                     </h3>
-                    <button onClick={() => setShowFavoritesDropdown(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close', 'Close')}</button>
+                    <button onClick={() => setShowFavoritesDropdown(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
                   </div>
                   {favorites.length > 0 ? (
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -355,7 +360,7 @@ export default function DashboardPage({ onLogout }) {
                     </div>
                   ) : (
                     <p className="text-center text-xs text-slate-500 py-4">
-                      {t('dashboard.noFavorites', 'No favorites added yet.')}
+                      {t('dashboard.noFavorites')}
                     </p>
                   )}
                 </div>
@@ -365,7 +370,7 @@ export default function DashboardPage({ onLogout }) {
             <button
               onClick={() => setShowProfile(true)}
               className="text-slate-400 hover:text-[#00d8f6] transition-colors"
-              aria-label="Profile"
+              aria-label={t('profile.myProfile')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -466,6 +471,7 @@ export default function DashboardPage({ onLogout }) {
 
       {modal && (
         <TradeModal
+          key={`${modal.symbol}|${modal.side}|${Boolean(modal.isSellOnly)}`}
           symbol={modal.symbol}
           side={modal.side}
           isSellOnly={modal.isSellOnly}
@@ -488,7 +494,6 @@ export default function DashboardPage({ onLogout }) {
     </div>
   );
 }
-
 function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, changes, favorites, toggleFavorite }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
@@ -520,7 +525,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                   toggleFavorite(s);
                 }}
                 className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-white/5 transition active:scale-95 flex items-center justify-center z-10"
-                title={isFav ? "Favorilerden Çıkar" : "Favorilere Ekle"}
+                title={isFav ? t('dashboard.removeFavorite') : t('dashboard.addFavorite')}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -569,7 +574,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
-              aria-label="Previous Page"
+              aria-label={t('dashboard.prevPage')}
             >
               ←
             </button>
@@ -580,7 +585,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 font-bold text-white transition hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
-              aria-label="Next Page"
+              aria-label={t('dashboard.nextPage')}
             >
               →
             </button>
@@ -929,5 +934,3 @@ function CoinLogo({ symbol }) {
     />
   );
 }
-
-

@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../api/client'
 import TradeModal from './TradeModal'
 
@@ -15,11 +15,16 @@ vi.mock('react-i18next', () => ({
         'trade.sell': 'Sat',
         'trade.coinQuantity': 'Coin miktarı',
         'trade.livePrice': 'Canlı Fiyat',
+        'trade.lockedPrice': 'Sabitlenmiş fiyat',
+        'trade.priceLockCountdown': `Fiyat 30 saniyeliğine kilitlendi. Geri sayım: ${options?.seconds} sn`,
+        'trade.priceLockExpired': '30 saniyelik fiyat kilidinin süresi doldu. Yeni fiyat için işlemi kapatıp yeniden açın.',
+        'trade.priceLockExpiredButton': 'Fiyat Kilidi Süresi Doldu',
         'trade.priceUnavailable': 'Fiyat verisi kullanılamıyor.',
         'trade.priceStale': 'Fiyat verisi güncel değil.',
         'trade.insufficientUsd': 'Bu işlem için yeterli USD bakiyeniz yok.',
         'trade.insufficientAssetSimple': 'Satış için yeterli varlık bakiyeniz yok.',
         'trade.invalidAmount': 'Miktar en fazla 8 ondalık basamaklı pozitif bir sayı olmalıdır.',
+        'trade.minimumOrderValue': 'Toplam işlem tutarı en az $0.01 olmalıdır.',
         'trade.processingOrder': 'Emir işleniyor…',
         'trade.executeOrder': 'Emri gerçekleştir',
         'trade.available': 'Mevcut:',
@@ -28,6 +33,15 @@ vi.mock('react-i18next', () => ({
         'trade.confirmDesc': 'Lütfen aşağıdaki işlem detaylarını onaylayın.',
         'trade.approveOrder': 'Evet, Onayla',
         'trade.backToEdit': 'Geri Dön',
+        'trade.estimatedTotal': 'Tahmini toplam',
+        'trade.successTitle': 'İşlem Başarılı!',
+        'trade.receiptDesc': 'İşleminiz güvenli bir şekilde gerçekleştirildi.',
+        'trade.receiptType': 'İşlem Tipi',
+        'trade.receiptAsset': 'Varlık',
+        'trade.receiptQuantity': 'Miktar',
+        'trade.receiptPrice': 'Birim Fiyat',
+        'trade.receiptTotal': 'Toplam Tutar',
+        'trade.closeReceipt': 'Tamam',
       }
       return translations[key] || key
     }
@@ -57,8 +71,14 @@ function renderModal(overrides = {}) {
 }
 
 describe('TradeModal', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
     cleanup()
+    vi.clearAllTimers()
+    vi.useRealTimers()
     vi.resetAllMocks()
     vi.unstubAllGlobals()
     baseProps.onComplete.mockResolvedValue(undefined)
@@ -76,12 +96,119 @@ describe('TradeModal', () => {
     expect(webSocketConstructor).not.toHaveBeenCalled()
   })
 
+  it('locks the first valid live price and starts the countdown only after it arrives', () => {
+    const rendered = renderModal({ livePrice: undefined, priceStatus: 'connecting' })
+
+    act(() => vi.advanceTimersByTime(5000))
+    expect(screen.queryByText(/Geri sayım:/)).toBeNull()
+
+    rendered.rerender(<TradeModal {...baseProps} livePrice="50000" priceStatus="live" />)
+
+    expect(screen.getByText(/^Sabitlenmiş fiyat:/).textContent).toContain('$50,000.00')
+    expect(screen.getByText('Fiyat 30 saniyeliğine kilitlendi. Geri sayım: 30 sn')).toBeTruthy()
+  })
+
+  it('keeps displayed price, estimate, validation, and confirmation on the locked price', () => {
+    const rendered = renderModal()
+    const input = screen.getByLabelText('Coin miktarı')
+
+    fireEvent.change(input, { target: { value: '0.01' } })
+    expect(screen.getByText('$500.00')).toBeTruthy()
+
+    act(() => vi.advanceTimersByTime(10000))
+    rendered.rerender(<TradeModal {...baseProps} livePrice="200000" />)
+
+    expect(screen.getByText(/^Sabitlenmiş fiyat:/).textContent).toContain('$50,000.00')
+    expect(screen.queryByText('$200,000.00')).toBeNull()
+    expect(screen.getByText('$500.00')).toBeTruthy()
+    expect(screen.getByText('Fiyat 30 saniyeliğine kilitlendi. Geri sayım: 20 sn')).toBeTruthy()
+
+    const submitButton = screen.getByRole('button', { name: 'Emri gerçekleştir' })
+    expect(submitButton.disabled).toBe(false)
+    fireEvent.click(submitButton)
+
+    expect(screen.getByText('$500.00')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Evet, Onayla' }).disabled).toBe(false)
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('blocks edit submission after the price lock expires', () => {
+    renderModal()
+    const input = screen.getByLabelText('Coin miktarı')
+    fireEvent.change(input, { target: { value: '0.01' } })
+
+    act(() => vi.advanceTimersByTime(30000))
+
+    expect(screen.getByRole('alert').textContent).toContain('fiyat kilidinin süresi doldu')
+    expect(screen.getByRole('button', { name: 'Fiyat Kilidi Süresi Doldu' }).disabled).toBe(true)
+
+    fireEvent.submit(input.closest('form'))
+
+    expect(screen.queryByText('İşlem Onayı')).toBeNull()
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('blocks approval when the price lock expires during confirmation', () => {
+    renderModal()
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+
+    const approveButton = screen.getByRole('button', { name: 'Evet, Onayla' })
+    vi.setSystemTime(Date.now() + 30000)
+    fireEvent.click(approveButton)
+
+    expect(screen.getByRole('alert').textContent).toContain('fiyat kilidinin süresi doldu')
+    expect(screen.getByRole('button', { name: 'Fiyat Kilidi Süresi Doldu' }).disabled).toBe(true)
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('shows backend receipt prices without replacing them with the locked estimate', async () => {
+    api.mockResolvedValueOnce({
+      symbol: 'BTC',
+      side: 'BUY',
+      quantity: '0.01',
+      unitPriceUsd: '51000',
+      totalUsd: '510',
+    })
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
+    expect(screen.getByText('$500.00')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, Onayla' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText('$51,000.00')).toBeTruthy()
+    expect(screen.getByText('$510.00')).toBeTruthy()
+    expect(api).toHaveBeenCalledWith('/trades', {
+      method: 'POST',
+      body: JSON.stringify({ symbol: 'BTC', side: 'BUY', quantity: '0.01' }),
+    })
+  })
+
   it('disables submit when the selected symbol price is stale', () => {
     renderModal({ priceStatus: 'stale' })
 
     expect(screen.getByText('Fiyat verisi güncel değil.')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
     expect(screen.getByRole('button', { name: 'Emri gerçekleştir' }).disabled).toBe(true)
+  })
+
+  it('keeps the locked price visible while stale validation blocks the trade', () => {
+    const rendered = renderModal()
+
+    rendered.rerender(<TradeModal {...baseProps} livePrice="51000" priceStatus="stale" />)
+
+    expect(screen.getByText(/^Sabitlenmiş fiyat:/).textContent).toContain('$50,000.00')
+    expect(screen.getByText('Fiyat verisi güncel değil.')).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
+    expect(screen.getByRole('alert').textContent).toBe('Fiyat verisi güncel değil.')
+    expect(screen.getByRole('button', { name: 'Emri gerçekleştir' }).disabled).toBe(true)
+    expect(api).not.toHaveBeenCalled()
   })
 
   it('re-enables a buy after an unaffordable quantity is changed to an affordable value', () => {
@@ -108,6 +235,90 @@ describe('TradeModal', () => {
     expect(screen.getByRole('alert').textContent).toContain('yeterli varlık bakiyeniz yok')
     expect(screen.getByRole('button', { name: 'Emri gerçekleştir' }).disabled).toBe(true)
     expect(api).not.toHaveBeenCalled()
+  })
+
+  it('blocks approval if the market becomes stale during confirmation', () => {
+    const rendered = renderModal()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+
+    rendered.rerender(<TradeModal {...baseProps} priceStatus="stale" />)
+
+    const approveButton = screen.getByRole('button', { name: 'Evet, Onayla' })
+    expect(screen.getByRole('alert').textContent).toBe('Fiyat verisi güncel değil.')
+    expect(approveButton.disabled).toBe(true)
+    fireEvent.click(approveButton)
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it('keeps sell-only orders on the sell side even if a caller passes buy', async () => {
+    api.mockResolvedValueOnce({
+      symbol: 'BTC',
+      side: 'SELL',
+      quantity: '0.5',
+      unitPriceUsd: '50000',
+      totalUsd: '25000',
+    })
+    renderModal({ side: 'BUY', isSellOnly: true })
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, Onayla' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(api).toHaveBeenCalledWith('/trades', {
+      method: 'POST',
+      body: JSON.stringify({ symbol: 'BTC', side: 'SELL', quantity: '0.5' }),
+    })
+  })
+
+  it('prevents duplicate POST requests when approval is submitted twice', async () => {
+    let resolveTrade
+    api.mockReturnValueOnce(new Promise(resolve => {
+      resolveTrade = resolve
+    }))
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    const approveButton = screen.getByRole('button', { name: 'Evet, Onayla' })
+
+    act(() => {
+      approveButton.click()
+      approveButton.click()
+    })
+
+    expect(api).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveTrade({
+        symbol: 'BTC',
+        side: 'BUY',
+        quantity: '0.01',
+        unitPriceUsd: '50000',
+        totalUsd: '500',
+      })
+      await Promise.resolve()
+    })
+  })
+
+  it('translates the backend minimum-order validation message', async () => {
+    api.mockRejectedValueOnce(new Error('Total order value must be at least $0.01.'))
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.00000001' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, Onayla' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('alert').textContent).toBe('Toplam işlem tutarı en az $0.01 olmalıdır.')
   })
 
   it('clears loading after an API failure and clears the request error when input changes', async () => {
