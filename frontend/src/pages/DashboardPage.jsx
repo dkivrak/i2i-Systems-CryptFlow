@@ -525,7 +525,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder={t('dashboard.searchPlaceholder')}
-          className="input pl-11 w-full"
+          className="input !pl-11 w-full"
         />
       </div>
 
