@@ -97,7 +97,10 @@ const resources = {
         analyzingPortfolio: 'Analyzing portfolio rebalancing...',
         insightsUpdateNote: 'Insights update every 10 minutes based on live market pricing and holdings.',
         aiAdviceDefault: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!',
-        refreshAdvice: 'Refresh Advice'
+        refreshAdvice: 'Refresh Advice',
+        totalCost: 'Total Cost',
+        cashBalance: 'Cash Balance',
+        profitAndLoss: 'Profit / Loss'
       },
 
       // --- Chat Widget ---
@@ -300,7 +303,10 @@ const resources = {
         analyzingPortfolio: 'Portföy dengesi analiz ediliyor...',
         insightsUpdateNote: 'Analizler, anlık piyasa fiyatlarına ve varlıklarınıza göre her 10 dakikada bir güncellenir.',
         aiAdviceDefault: 'Portföyünüz şu anda sadece nakitten oluşuyor. Kişiselleştirilmiş analizler almak için kripto varlık edinin!',
-        refreshAdvice: 'Analizi Yenile'
+        refreshAdvice: 'Analizi Yenile',
+        totalCost: 'Toplam Maliyet',
+        cashBalance: 'Nakit Bakiye',
+        profitAndLoss: 'Kar / Zarar'
       },
 
       // --- Chat Widget ---
