@@ -67,12 +67,20 @@ const baseProps = {
 }
 
 function renderModal(overrides = {}) {
-  return render(<TradeModal {...baseProps} {...overrides} />)
+  const result = render(<TradeModal {...baseProps} {...overrides} />)
+  api.mockClear()
+  return result
 }
 
 describe('TradeModal', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    api.mockImplementation((path) => {
+      if (path && path.includes('/market/history')) {
+        return Promise.resolve([])
+      }
+      return Promise.resolve()
+    })
   })
 
   afterEach(() => {
@@ -163,6 +171,7 @@ describe('TradeModal', () => {
   })
 
   it('shows backend receipt prices without replacing them with the locked estimate', async () => {
+    renderModal()
     api.mockResolvedValueOnce({
       symbol: 'BTC',
       side: 'BUY',
@@ -170,7 +179,6 @@ describe('TradeModal', () => {
       unitPriceUsd: '51000',
       totalUsd: '510',
     })
-    renderModal()
 
     fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
     expect(screen.getByText('$500.00')).toBeTruthy()
@@ -183,7 +191,7 @@ describe('TradeModal', () => {
 
     expect(screen.getByText('$51,000.00')).toBeTruthy()
     expect(screen.getByText('$510.00')).toBeTruthy()
-    expect(api).toHaveBeenCalledWith('/trades', {
+    expect(api).toHaveBeenCalledWith('/api/trades', {
       method: 'POST',
       body: JSON.stringify({ symbol: 'BTC', side: 'BUY', quantity: '0.01' }),
     })
@@ -253,6 +261,7 @@ describe('TradeModal', () => {
   })
 
   it('keeps sell-only orders on the sell side even if a caller passes buy', async () => {
+    renderModal({ side: 'BUY', isSellOnly: true })
     api.mockResolvedValueOnce({
       symbol: 'BTC',
       side: 'SELL',
@@ -260,7 +269,6 @@ describe('TradeModal', () => {
       unitPriceUsd: '50000',
       totalUsd: '25000',
     })
-    renderModal({ side: 'BUY', isSellOnly: true })
 
     fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.5' } })
     fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
@@ -270,7 +278,7 @@ describe('TradeModal', () => {
       await Promise.resolve()
     })
 
-    expect(api).toHaveBeenCalledWith('/trades', {
+    expect(api).toHaveBeenCalledWith('/api/trades', {
       method: 'POST',
       body: JSON.stringify({ symbol: 'BTC', side: 'SELL', quantity: '0.5' }),
     })
@@ -278,10 +286,10 @@ describe('TradeModal', () => {
 
   it('prevents duplicate POST requests when approval is submitted twice', async () => {
     let resolveTrade
+    renderModal()
     api.mockReturnValueOnce(new Promise(resolve => {
       resolveTrade = resolve
     }))
-    renderModal()
 
     fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.01' } })
     fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
@@ -307,8 +315,8 @@ describe('TradeModal', () => {
   })
 
   it('translates the backend minimum-order validation message', async () => {
-    api.mockRejectedValueOnce(new Error('Total order value must be at least $0.01.'))
     renderModal()
+    api.mockRejectedValueOnce(new Error('Total order value must be at least $0.01.'))
 
     fireEvent.change(screen.getByLabelText('Coin miktarı'), { target: { value: '0.00000001' } })
     fireEvent.click(screen.getByRole('button', { name: 'Emri gerçekleştir' }))
@@ -322,8 +330,8 @@ describe('TradeModal', () => {
   })
 
   it('clears loading after an API failure and clears the request error when input changes', async () => {
-    api.mockRejectedValueOnce(new Error('Yetersiz USD bakiyesi'))
     renderModal()
+    api.mockRejectedValueOnce(new Error('Yetersiz USD bakiyesi'))
     const input = screen.getByLabelText('Coin miktarı')
 
     fireEvent.change(input, { target: { value: '0.01' } })

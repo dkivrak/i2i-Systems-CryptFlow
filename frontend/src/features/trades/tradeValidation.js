@@ -7,12 +7,12 @@ export const INSUFFICIENT_ASSET_MESSAGE = 'trade.insufficientAssetSimple'
 export const INVALID_AMOUNT_MESSAGE = 'trade.invalidAmount'
 
 export function validateTrade({ quantity, side, symbol, livePrice, priceStatus, portfolio }) {
-  if (!isPositiveQuantity(quantity)) return INVALID_AMOUNT_MESSAGE
-
   const price = Number(livePrice)
   if (priceStatus !== 'live' || !Number.isFinite(price) || price <= 0) {
     return priceStatus === 'stale' ? PRICE_STALE_MESSAGE : PRICE_UNAVAILABLE_MESSAGE
   }
+
+  if (!isPositiveQuantity(quantity)) return INVALID_AMOUNT_MESSAGE
 
   const amount = Number(quantity)
   if (side === 'BUY') {

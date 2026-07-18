@@ -100,7 +100,8 @@ const resources = {
         refreshAdvice: 'Refresh Advice',
         totalCost: 'Total Cost',
         cashBalance: 'Cash Balance',
-        profitAndLoss: 'Profit / Loss'
+        profitAndLoss: 'Profit / Loss',
+        marketDataMinutelyInfo: 'Market chart data shows minute-by-minute increase/decrease.'
       },
 
       // --- Chat Widget ---
@@ -127,6 +128,13 @@ const resources = {
       // --- Trade Modal ---
       trade: {
         priceTrend: 'Price Trend',
+        period: {
+          live: 'Live',
+          daily: 'Daily',
+          weekly: 'Weekly',
+          monthly: 'Monthly',
+          yearly: 'Yearly'
+        },
         newOrder: 'NEW ORDER',
         symbolTransaction: '{{symbol}} Transaction',
         lockedPrice: 'Locked price',
@@ -306,7 +314,8 @@ const resources = {
         refreshAdvice: 'Analizi Yenile',
         totalCost: 'Toplam Maliyet',
         cashBalance: 'Nakit Bakiye',
-        profitAndLoss: 'Kar / Zarar'
+        profitAndLoss: 'Kar / Zarar',
+        marketDataMinutelyInfo: 'Grafik verileri dakikalık artış/azalışı göstermektedir.'
       },
 
       // --- Chat Widget ---
@@ -333,6 +342,13 @@ const resources = {
       // --- Trade Modal ---
       trade: {
         priceTrend: 'Fiyat Trendi',
+        period: {
+          live: 'Canlı',
+          daily: 'Günlük',
+          weekly: 'Haftalık',
+          monthly: 'Aylık',
+          yearly: 'Yıllık'
+        },
         newOrder: 'YENİ EMİR',
         symbolTransaction: '{{symbol}} İşlemi',
         lockedPrice: 'Sabitlenmiş fiyat',
