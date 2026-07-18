@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, token } from '../api/client';
@@ -103,9 +103,6 @@ export default function AuthPage({ onAuth }) {
             <div className="animate-marquee-vertical flex flex-col gap-4 py-1">
               {displayCoins.map((item, idx) => {
                 const symbol = item.symbol;
-                const price = item.price;
-                const change = item.change;
-                const coinName = COIN_NAMES[symbol] || symbol;
                 const colorClass = [
                   'bg-amber-400/20 text-amber-300 border border-amber-500/20',
                   'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
@@ -113,39 +110,18 @@ export default function AuthPage({ onAuth }) {
                 ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
 
                 return (
-                  <div
+                  <TickerItem
                     key={`${symbol}-1`}
-                    className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
-                        {symbol[0]}
-                      </span>
-                      <div className="text-left">
-                        <span className="font-bold text-white block">{symbol}</span>
-                        <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-white block">
-                        {price ? money(price) : '...'}
-                      </span>
-                      {change !== undefined && (
-                        <span className={`text-xs font-bold block ${
-                          change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
-                        }`}>
-                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    symbol={symbol}
+                    price={item.price}
+                    change={item.change}
+                    coinName={COIN_NAMES[symbol] || symbol}
+                    colorClass={colorClass}
+                  />
                 );
               })}
               {displayCoins.map((item, idx) => {
                 const symbol = item.symbol;
-                const price = item.price;
-                const change = item.change;
-                const coinName = COIN_NAMES[symbol] || symbol;
                 const colorClass = [
                   'bg-amber-400/20 text-amber-300 border border-amber-500/20',
                   'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
@@ -153,32 +129,14 @@ export default function AuthPage({ onAuth }) {
                 ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
 
                 return (
-                  <div
+                  <TickerItem
                     key={`${symbol}-2`}
-                    className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
-                        {symbol[0]}
-                      </span>
-                      <div className="text-left">
-                        <span className="font-bold text-white block">{symbol}</span>
-                        <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-white block">
-                        {price ? money(price) : '...'}
-                      </span>
-                      {change !== undefined && (
-                        <span className={`text-xs font-bold block ${
-                          change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
-                        }`}>
-                          {change >= 0 ? '+' : ''}{change.toFixed(2)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    symbol={symbol}
+                    price={item.price}
+                    change={item.change}
+                    coinName={COIN_NAMES[symbol] || symbol}
+                    colorClass={colorClass}
+                  />
                 );
               })}
             </div>
@@ -286,5 +244,70 @@ export default function AuthPage({ onAuth }) {
         </div>
       </section>
     </main>
+  );
+}
+
+function CoinLogo({ symbol, colorClass }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (imgError) {
+    return (
+      <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
+        {symbol[0]}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`}
+      alt={symbol}
+      onError={() => setImgError(true)}
+      className="h-8 w-8 rounded-full object-contain shrink-0"
+      loading="lazy"
+    />
+  );
+}
+
+function TickerItem({ symbol, price, change, coinName, colorClass }) {
+  const prevPriceRef = useRef(price);
+  const [flashClass, setFlashClass] = useState('');
+
+  useEffect(() => {
+    if (price && prevPriceRef.current && price !== prevPriceRef.current) {
+      const isUp = Number(price) > Number(prevPriceRef.current);
+      setFlashClass(isUp ? 'text-[#10d98e] scale-105 transition-all duration-300' : 'text-[#ff4b6e] scale-105 transition-all duration-300');
+      const timer = setTimeout(() => {
+        setFlashClass('');
+      }, 1000);
+      prevPriceRef.current = price;
+      return () => clearTimeout(timer);
+    } else if (price) {
+      prevPriceRef.current = price;
+    }
+  }, [price]);
+
+  return (
+    <div className="flex items-center justify-between text-sm bg-[#0a1424]/60 border border-white/5 rounded-2xl p-4 backdrop-blur-md">
+      <div className="flex items-center gap-3">
+        <CoinLogo symbol={symbol} colorClass={colorClass} />
+        <div className="text-left">
+          <span className="font-bold text-white block">{symbol}</span>
+          <span className="text-[10px] text-slate-500 block leading-tight">{coinName}</span>
+        </div>
+      </div>
+      <div className="text-right">
+        <span className={`font-bold text-white block ${flashClass}`}>
+          {price ? money(price) : '...'}
+        </span>
+        {change !== undefined && (
+          <span className={`text-xs font-bold block ${
+            change >= 0 ? 'text-[#10d98e]' : 'text-[#ff4b6e]'
+          }`}>
+            {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
