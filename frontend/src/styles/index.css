@@ -39,7 +39,10 @@ body.light {
                  #edf2f7;
 }
 
-body.light .text-white {
+body.light .text-white,
+body.light .text-slate-50,
+body.light .text-slate-100,
+body.light .text-slate-200 {
   color: #0f172a !important;
 }
 
@@ -47,6 +50,14 @@ body.light .text-slate-300,
 body.light .text-slate-400,
 body.light .text-slate-500 {
   color: #4a5568 !important;
+}
+
+body.light .label {
+  color: #718096 !important;
+}
+
+body.light .hover\:text-white:hover {
+  color: #0f172a !important;
 }
 
 body.light .bg-\[\#07111f\]\/90,
@@ -70,6 +81,35 @@ body.light .bg-\[\#081522\]\/50 {
   border-color: #cbd5e1 !important;
 }
 
+body.light .bg-\[\#081522\]\/60 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#081522\]\/40 {
+  background-color: rgba(255, 255, 255, 0.4) !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#0a1424\]\/60 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#12243a\] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#040a15\] {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#071320\]\/30 {
+  background-color: rgba(226, 232, 240, 0.3) !important;
+}
+
 body.light .bg-\[\#0c1a2a\] {
   background-color: #f8fafc !important;
   border-color: #cbd5e1 !important;
@@ -84,8 +124,25 @@ body.light .bg-\[\#0c1a2a\] .text-\[\#00d8f6\] {
   color: #0284c7 !important;
 }
 
+body.light .bg-\[\#00d8f6\]\/20 {
+  background-color: rgba(2, 132, 199, 0.15) !important;
+}
+
+body.light .bg-\[\#00d8f6\]\/10 {
+  background-color: rgba(2, 132, 199, 0.1) !important;
+}
+
+body.light .text-\[\#00d8f6\] {
+  color: #0284c7 !important;
+}
+
 body.light svg path[stroke="#00d8f6"] {
   stroke: #0284c7 !important;
+}
+
+body.light .hover\:bg-white\/10:hover,
+body.light .hover\:bg-white\/5:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
 }
 
 body.light .text-gradient {
@@ -150,9 +207,9 @@ button, input {
 
 .input {
   width: 100%;
-  border: 1px solid rgba(0, 216, 246, 0.15);
-  background: rgba(8, 16, 32, 0.75);
-  color: #f8fafc;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-text);
   border-radius: 0.75rem;
   padding: 0.8rem 1rem;
   outline: none;
@@ -162,7 +219,7 @@ button, input {
 .input:focus {
   border-color: var(--cyan);
   box-shadow: 0 0 0 3px rgba(0, 216, 246, 0.12);
-  background: rgba(8, 16, 32, 0.9);
+  background: var(--input-bg);
 }
 
 .btn {
