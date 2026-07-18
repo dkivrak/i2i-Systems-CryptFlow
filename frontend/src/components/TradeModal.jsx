@@ -387,9 +387,9 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
 
           <div className="rounded-2xl bg-[#081522] p-5 space-y-3.5 border border-white/5 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-400">Type</span>
+              <span className="text-slate-400">{t('trade.receiptType', { defaultValue: 'Type' })}</span>
               <span className={`font-bold px-2 py-0.5 rounded text-xs ${side === 'BUY' ? 'bg-[#00d8f6]/10 text-[#00d8f6]' : 'bg-rose-500/10 text-rose-400'}`}>
-                {orderType} {side === 'BUY' ? t('trade.buy') : t('trade.sell')}
+                {t(`trade.orderType.${orderType}`, { defaultValue: orderType.replace('_', ' ') })} {side === 'BUY' ? t('trade.buy') : t('trade.sell')}
               </span>
             </div>
             <div className="flex justify-between">
@@ -493,7 +493,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
                 orderType === tType ? 'bg-[#00d8f6]/20 text-[#00d8f6]' : 'text-slate-500'
               }`}
             >
-              {tType.replace('_', ' ')}
+              {t(`trade.orderType.${tType}`, { defaultValue: tType.replace('_', ' ') })}
             </button>
           ))}
         </div>
@@ -502,7 +502,7 @@ export default function TradeModal({ symbol, side: initialSide = 'BUY', isSellOn
           {/* Target Price input (only for LIMIT/STOP_LOSS) */}
           {orderType !== 'MARKET' && (
             <div className="mb-3.5">
-              <label htmlFor="target-price" className="text-xs text-slate-400">Target Price (USD)</label>
+              <label htmlFor="target-price" className="text-xs text-slate-400">{t('trade.targetPriceLabel', { defaultValue: 'Target Price (USD)' })}</label>
               <input
                 id="target-price"
                 autoComplete="off"

@@ -128,6 +128,11 @@ const resources = {
       // --- Trade Modal ---
       trade: {
         priceTrend: 'Price Trend',
+        orderType: {
+          MARKET: 'MARKET',
+          LIMIT: 'LIMIT',
+          STOP_LOSS: 'STOP LOSS'
+        },
         period: {
           live: 'Live',
           daily: 'Daily',
@@ -156,6 +161,7 @@ const resources = {
         insufficientAssetSimple: 'Insufficient asset balance for sale.',
         invalidAmount: 'Quantity must be positive with at most 8 decimal places.',
         invalidTargetPrice: 'Target price must be a positive number.',
+        targetPriceLabel: 'Target Price (USD)',
         minimumOrderValue: 'Total order value must be at least $0.01.',
         livePrice: 'Live Price',
         processingOrder: 'Processing order...',
@@ -342,6 +348,11 @@ const resources = {
       // --- Trade Modal ---
       trade: {
         priceTrend: 'Fiyat Trendi',
+        orderType: {
+          MARKET: 'PİYASA',
+          LIMIT: 'LİMİT',
+          STOP_LOSS: 'STOP KAYIP'
+        },
         period: {
           live: 'Canlı',
           daily: 'Günlük',
@@ -370,6 +381,7 @@ const resources = {
         insufficientAssetSimple: 'Satış için yeterli varlık bakiyeniz yok.',
         invalidAmount: 'Miktar en fazla 8 ondalık basamaklı pozitif bir sayı olmalıdır.',
         invalidTargetPrice: 'Hedef fiyat pozitif bir sayı olmalıdır.',
+        targetPriceLabel: 'Hedef Fiyat (USD)',
         minimumOrderValue: 'Toplam işlem tutarı en az $0.01 olmalıdır.',
         livePrice: 'Canlı Fiyat',
         processingOrder: 'Emir işleniyor...',

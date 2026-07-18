@@ -1380,25 +1380,29 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
           </div>
           <div className="divide-y divide-white/5">
             {displayedOrders.length > 0 ? (
-              displayedOrders.map(o => (
-                <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
-                  <div>
-                    <span className={`font-bold px-1.5 py-0.5 rounded text-[9px] mr-2 ${
-                      o.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                    }`}>{o.type} {o.side}</span>
-                    <span className="font-bold text-white">{o.quantity} {o.symbol}</span>
+              displayedOrders.map(o => {
+                const orderTypeTranslated = t(`trade.orderType.${o.type}`, { defaultValue: o.type.replace('_', ' ') }).toUpperCase();
+                const orderSideTranslated = (o.side === 'BUY' ? t('trade.buy') : t('trade.sell')).toUpperCase();
+                return (
+                  <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
+                    <div>
+                      <span className={`font-bold px-1.5 py-0.5 rounded text-[9px] mr-2 ${
+                        o.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}>{orderTypeTranslated} {orderSideTranslated}</span>
+                      <span className="font-bold text-white">{o.quantity} {o.symbol}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-bold text-[#00d8f6]">{money(o.targetPrice)}</span>
+                      <button 
+                        onClick={() => handleCancelOrder(o.id)}
+                        className="rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] text-slate-400 hover:text-white transition font-bold"
+                      >
+                        {t('orders.cancelOrder', { defaultValue: 'Cancel' })}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-bold text-[#00d8f6]">{money(o.targetPrice)}</span>
-                    <button 
-                      onClick={() => handleCancelOrder(o.id)}
-                      className="rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] text-slate-400 hover:text-white transition font-bold"
-                    >
-                      {t('orders.cancelOrder', { defaultValue: 'Cancel' })}
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="p-5 text-center text-slate-500">{t('orders.noPendingOrders', { defaultValue: 'No pending limit orders.' })}</p>
             )}
@@ -1477,17 +1481,20 @@ function HistoryPanel({ trades, t, dateLocale }) {
           </thead>
           <tbody>
             {pagedTrades.length ? (
-              pagedTrades.map(t2 => (
-                <tr key={t2.id} className="border-b border-white/5">
-                  <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {t2.side} · {t2.symbol}
-                  </td>
-                  <td>{coin(t2.quantity)}</td>
-                  <td>{money(t2.unitPriceUsd)}</td>
-                  <td>{money(t2.totalUsd)}</td>
-                  <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
-                </tr>
-              ))
+              pagedTrades.map(t2 => {
+                const transactionSideTranslated = (t2.side === 'BUY' ? t('trade.buy') : t('trade.sell')).toUpperCase();
+                return (
+                  <tr key={t2.id} className="border-b border-white/5">
+                    <td className={`p-5 font-bold ${t2.side === 'BUY' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {transactionSideTranslated} · {t2.symbol}
+                    </td>
+                    <td>{coin(t2.quantity)}</td>
+                    <td>{money(t2.unitPriceUsd)}</td>
+                    <td>{money(t2.totalUsd)}</td>
+                    <td className="text-slate-500">{new Date(t2.executedAt).toLocaleString(dateLocale)}</td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="5" className="p-10 text-center text-slate-500">{t('dashboard.noTransactions')}</td>
