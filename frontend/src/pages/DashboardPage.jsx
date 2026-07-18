@@ -67,6 +67,16 @@ export default function DashboardPage({ onLogout }) {
     }
   });
 
+  const [readAlertIds, setReadAlertIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cryptflow_read_alert_ids');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem('cryptflow_favorites', JSON.stringify(favorites));
@@ -93,10 +103,7 @@ export default function DashboardPage({ onLogout }) {
   const lastReadTimeVal = localStorage.getItem('cryptflow_daily_summary_read_time') || '0';
   const cachedTimeVal = localStorage.getItem('cryptflow_daily_summary_time') || '0';
   const hasUnreadSummary = dailySummary && Number(lastReadTimeVal) < Number(cachedTimeVal);
-  const unreadAlertsCount = topTriggeredAlerts.filter(a => {
-    const triggerTime = a.triggeredAt ? new Date(a.triggeredAt).getTime() : new Date(a.createdAt).getTime();
-    return triggerTime > Number(lastReadTimeVal);
-  }).length;
+  const unreadAlertsCount = topTriggeredAlerts.filter(a => !readAlertIds.includes(a.id)).length;
   const totalUnreadCount = (hasUnreadSummary ? 1 : 0) + unreadAlertsCount;
 
   useEffect(() => {
@@ -167,11 +174,26 @@ export default function DashboardPage({ onLogout }) {
       if (next) {
         localStorage.setItem('cryptflow_daily_summary_read_time', Date.now().toString());
         if (topTriggeredAlerts.length > 0) {
-          localStorage.setItem('cryptflow_last_seen_alert_id', topTriggeredAlerts[0].id);
+          setReadAlertIds(prevRead => {
+            const currentIds = topTriggeredAlerts.map(a => a.id);
+            const newRead = Array.from(new Set([...prevRead, ...currentIds]));
+            localStorage.setItem('cryptflow_read_alert_ids', JSON.stringify(newRead));
+            return newRead;
+          });
         }
       }
       return next;
     });
+  };
+
+  const handleDeleteAlert = async (id, e) => {
+    e.stopPropagation();
+    try {
+      await api(`/api/alerts/${id}`, { method: 'DELETE' });
+      setTopTriggeredAlerts(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error("Failed to delete alert", err);
+    }
   };
 
   const refresh = useCallback(async () => {
@@ -305,51 +327,75 @@ export default function DashboardPage({ onLogout }) {
               </button>
 
               {showNotifications && (
-                <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-80 z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)] max-h-[350px] overflow-y-auto pr-1">
+                <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-[380px] z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)] max-h-[480px] overflow-y-auto pr-1">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
                     <h3 className="text-sm font-bold text-white">{t('dashboard.notifications')}</h3>
                     <button onClick={() => setShowNotifications(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
                   </div>
                   <div className="space-y-3">
                     {dailySummary && (
-                      <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
-                        <div className="flex gap-2">
-                          <span className="text-[#00d8f6] text-xs">✦</span>
-                          <div>
-                            <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle', { defaultValue: 'Daily Insights' })}</p>
-                            <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
+                      <>
+                        <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
+                          <div className="flex gap-2">
+                            <span className="text-[#00d8f6] text-xs">✦</span>
+                            <div>
+                              <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle', { defaultValue: 'Daily Insights' })}</p>
+                              <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => {
+                              setTab('portfolio');
+                              setShowNotifications(false);
+                            }}
+                            className="mt-3 w-full rounded-lg bg-[#00d8f6]/10 py-1.5 text-center text-xs font-bold text-[#00d8f6] hover:bg-[#00d8f6]/20 transition"
+                          >
+                            {t('dashboard.goToPortfolio')}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => {
-                            setTab('portfolio');
-                            setShowNotifications(false);
-                          }}
-                          className="mt-3 w-full rounded-lg bg-[#00d8f6]/10 py-1.5 text-center text-xs font-bold text-[#00d8f6] hover:bg-[#00d8f6]/20 transition"
-                        >
-                          {t('dashboard.goToPortfolio')}
-                        </button>
-                      </div>
+                        <div className="border-b border-white/10 my-3" />
+                      </>
                     )}
-                    {topTriggeredAlerts.map(a => (
-                      <div key={a.id} className="rounded-xl bg-emerald-500/10 p-3 border border-emerald-500/20 text-xs">
-                        <div className="flex items-start gap-2">
-                          <span className="text-emerald-400 font-bold">✓</span>
-                          <div className="flex-1">
-                            <p className="font-bold text-slate-200">
-                              {a.symbol} {a.condition === 'ABOVE'
-                                ? t('orders.wentAbove', { defaultValue: 'went above' })
-                                : t('orders.wentBelow', { defaultValue: 'went below' })
-                              }
-                            </p>
-                            <p className="mt-0.5 text-[#00d8f6] font-bold">{money(a.targetPrice)}</p>
-                            <p className="mt-1 text-[9px] text-slate-500">
-                              {new Date(a.createdAt).toLocaleTimeString()}
-                            </p>
+                    {(() => {
+                      const sortedAlerts = [...topTriggeredAlerts].sort((a, b) => {
+                        const timeA = a.triggeredAt ? new Date(a.triggeredAt).getTime() : new Date(a.createdAt).getTime();
+                        const timeB = b.triggeredAt ? new Date(b.triggeredAt).getTime() : new Date(b.createdAt).getTime();
+                        return timeB - timeA;
+                      });
+                      return sortedAlerts.map(a => {
+                        const isRead = readAlertIds.includes(a.id);
+                        return (
+                          <div key={a.id} className={`group relative rounded-xl p-3 border text-xs transition-all ${
+                            isRead
+                              ? 'bg-slate-500/5 border-white/5 opacity-60'
+                              : 'bg-emerald-500/10 border-emerald-500/20'
+                          }`}>
+                            <div className="flex items-start gap-2 pr-6">
+                              <span className={isRead ? 'text-slate-500 font-bold' : 'text-emerald-400 font-bold'}>✓</span>
+                              <div className="flex-1">
+                                <p className="font-bold text-slate-200">
+                                  {a.symbol} {a.condition === 'ABOVE'
+                                    ? t('orders.wentAbove', { defaultValue: 'went above' })
+                                    : t('orders.wentBelow', { defaultValue: 'went below' })
+                                  }
+                                </p>
+                                <p className="mt-0.5 text-[#00d8f6] font-bold">{money(a.targetPrice)}</p>
+                                <p className="mt-1 text-[9px] text-slate-500">
+                                  {new Date(a.triggeredAt || a.createdAt).toLocaleTimeString()}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => handleDeleteAlert(a.id, e)}
+                              className="absolute top-2 right-2 text-slate-500 hover:text-white text-base leading-none p-1 transition opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              title={t('orders.cancelOrder', { defaultValue: 'Delete' })}
+                            >
+                              &times;
+                            </button>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      });
+                    })()}
                     {!dailySummary && topTriggeredAlerts.length === 0 && (
                       <p className="text-center text-xs text-slate-500 py-4">{t('dashboard.noNotifications')}</p>
                     )}
