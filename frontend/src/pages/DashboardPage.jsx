@@ -900,7 +900,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
 }
 
 function CoinLogo({ symbol }) {
-  const [imgError, setImgError] = useState(false);
+  const [sourceIndex, setSourceIndex] = useState(0);
 
   const getSymbolGradient = (sym) => {
     let hash = 0;
@@ -912,7 +912,12 @@ function CoinLogo({ symbol }) {
     return `linear-gradient(135deg, hsl(${h1}, 85%, 60%), hsl(${h2}, 90%, 40%))`;
   };
 
-  if (imgError) {
+  const sources = [
+    `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`,
+    `https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`
+  ];
+
+  if (sourceIndex >= sources.length) {
     const displaySymbol = symbol.length > 4 ? symbol.slice(0, 3) : symbol;
     return (
       <span
@@ -926,9 +931,9 @@ function CoinLogo({ symbol }) {
 
   return (
     <img
-      src={`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`}
+      src={sources[sourceIndex]}
       alt={symbol}
-      onError={() => setImgError(true)}
+      onError={() => setSourceIndex(prev => prev + 1)}
       className="h-11 w-11 rounded-full object-contain"
       loading="lazy"
     />

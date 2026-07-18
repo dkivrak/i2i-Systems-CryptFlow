@@ -248,9 +248,14 @@ export default function AuthPage({ onAuth }) {
 }
 
 function CoinLogo({ symbol, colorClass }) {
-  const [imgError, setImgError] = useState(false);
+  const [sourceIndex, setSourceIndex] = useState(0);
 
-  if (imgError) {
+  const sources = [
+    `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`,
+    `https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`
+  ];
+
+  if (sourceIndex >= sources.length) {
     return (
       <span className={`grid h-8 w-8 place-items-center rounded-full font-black text-xs shrink-0 ${colorClass}`}>
         {symbol[0]}
@@ -260,9 +265,9 @@ function CoinLogo({ symbol, colorClass }) {
 
   return (
     <img
-      src={`https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`}
+      src={sources[sourceIndex]}
       alt={symbol}
-      onError={() => setImgError(true)}
+      onError={() => setSourceIndex(prev => prev + 1)}
       className="h-8 w-8 rounded-full object-contain shrink-0"
       loading="lazy"
     />
