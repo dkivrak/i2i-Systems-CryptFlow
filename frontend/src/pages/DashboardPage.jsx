@@ -566,7 +566,8 @@ export default function DashboardPage({ onLogout }) {
             ['market', t('dashboard.tabMarket')],
             ['portfolio', t('dashboard.tabPortfolio')],
             ['history', t('dashboard.tabTransactions')],
-            ['orders', t('dashboard.tabOrders', { defaultValue: 'Alarms & Limits' })]
+            ['orders', t('dashboard.tabOrders', { defaultValue: 'Alarms & Limits' })],
+            ['news', t('dashboard.tabNews', { defaultValue: 'News' })]
           ].map(([id, label]) => (
             <button
               key={id}
@@ -597,6 +598,7 @@ export default function DashboardPage({ onLogout }) {
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} currentLang={currentLang} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
         {tab === 'orders' && <OrdersPanel market={market} t={t} dateLocale={dateLocale} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} />}
+        {tab === 'news' && <NewsPanel t={t} dateLocale={dateLocale} />}
       </main>
 
       {modal && (
@@ -1502,6 +1504,142 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function NewsPanel({ t, dateLocale }) {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(6);
+
+  const fetchNews = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=EN');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      if (data && Array.isArray(data.Data)) {
+        setNews(data.Data);
+      } else {
+        throw new Error('Invalid format');
+      }
+    } catch (err) {
+      console.error('Error fetching crypto news:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#00d8f6] border-t-transparent mb-4" />
+        <p className="text-slate-500 text-sm font-bold">{t('dashboard.newsLoading', { defaultValue: 'Loading latest crypto news...' })}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 card rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center max-w-md mx-auto">
+        <p className="text-red-400 font-bold text-sm mb-4">{t('dashboard.newsError', { defaultValue: 'Failed to load crypto news.' })}</p>
+        <button
+          onClick={fetchNews}
+          className="btn btn-primary py-2 px-6 text-sm"
+        >
+          {t('dashboard.refreshPrices', { defaultValue: 'Retry' })}
+        </button>
+      </div>
+    );
+  }
+
+  const displayedNews = news.slice(0, visibleCount);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-black text-white tracking-tight uppercase">
+          {t('dashboard.newsTitle', { defaultValue: 'Crypto News' })}
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {displayedNews.map(item => {
+          const publishedDate = new Date(item.published_on * 1000).toLocaleString(dateLocale, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          return (
+            <article key={item.id} className="card rounded-2xl overflow-hidden flex flex-col justify-between min-h-[440px] h-[450px]">
+              <div>
+                <div className="h-44 w-full bg-[#081522] overflow-hidden relative border-b border-white/5">
+                  {item.imageurl ? (
+                    <img
+                      src={item.imageurl}
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[#00d8f6]/30 font-black text-3xl">
+                      CRYPTFLOW
+                    </div>
+                  )}
+                  <span className="absolute bottom-3 left-3 bg-[#0a1929]/80 border border-white/10 px-2 py-0.5 rounded text-[10px] font-bold text-[#00d8f6] backdrop-blur-sm">
+                    {item.source_info?.name || item.source}
+                  </span>
+                </div>
+
+                <div className="p-5 space-y-2">
+                  <p className="text-[10px] text-slate-500 font-semibold">{publishedDate}</p>
+                  <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 hover:text-[#00d8f6] transition">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      {item.title}
+                    </a>
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">
+                    {item.body}
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-5 pb-5">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-xs font-black text-[#00d8f6] hover:text-[#1fc8a4] transition"
+                >
+                  {t('dashboard.readMore', { defaultValue: 'Read Full Article ↗' })}
+                </a>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {visibleCount < news.length && (
+        <div className="text-center pt-4">
+          <button
+            onClick={() => setVisibleCount(prev => prev + 6)}
+            className="btn bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold py-2.5 px-8 text-xs transition"
+          >
+            {t('dashboard.nextPage', { defaultValue: 'Load More' })}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
