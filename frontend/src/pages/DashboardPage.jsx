@@ -647,7 +647,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
           <p className="mt-2 text-sm text-slate-500">{t('dashboard.totalCoinValueDesc')}</p>
         </div>
       </div>
-      <div className="card overflow-hidden rounded-2xl flex flex-col justify-between min-h-[400px]">
+      <div className="card overflow-hidden rounded-2xl flex flex-col justify-between h-[440px]">
         <div>
           <div className="border-b border-white/10 p-6">
             <p className="label">{t('dashboard.assetAllocation')}</p>
