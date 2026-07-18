@@ -8,7 +8,7 @@ import { money, coin } from '../utils/format';
 import { changeAppLanguage } from '../utils/language';
 
 const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK'];
-const DEFAULT_TRADE_PAGE_SIZE = 20;
+const DEFAULT_TRADE_PAGE_SIZE = 10000;
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
