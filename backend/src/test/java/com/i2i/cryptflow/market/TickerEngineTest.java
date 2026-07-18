@@ -18,6 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
+import com.i2i.cryptflow.trade.OrderService;
+import com.i2i.cryptflow.market.AlertService;
 
 @SuppressWarnings("unchecked")
 class TickerEngineTest {
@@ -25,11 +27,15 @@ class TickerEngineTest {
   private final PriceSnapshotRepository snapshots = mock(PriceSnapshotRepository.class);
   private final PriceSnapshotWriter writer = mock(PriceSnapshotWriter.class);
   private final SupportedSymbolsService supportedSymbols = mock(SupportedSymbolsService.class);
+  private final OrderService orderService = mock(OrderService.class);
+  private final AlertService alertService = mock(AlertService.class);
   private final TickerEngine engine = new TickerEngine(
       market,
       snapshots,
       writer,
       supportedSymbols,
+      orderService,
+      alertService,
       new BigDecimal("60000.00"),
       new BigDecimal("3000.00"),
       new BigDecimal("150.00")

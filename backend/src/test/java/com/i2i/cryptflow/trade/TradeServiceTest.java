@@ -18,7 +18,8 @@ class TradeServiceTest {
   TradeTransactionRepository trades = mock(TradeTransactionRepository.class);
   MarketPriceService market = mock(MarketPriceService.class);
   SupportedSymbolsService supportedSymbols = mock(SupportedSymbolsService.class);
-  TradeService service = new TradeService(wallets, assets, trades, market, supportedSymbols);
+  EquityHistoryRepository equityHistory = mock(EquityHistoryRepository.class);
+  TradeService service = new TradeService(wallets, assets, trades, market, supportedSymbols, equityHistory);
 
   @BeforeEach
   void setUp() {
