@@ -15,6 +15,30 @@ export default function AuthPage({ onAuth }) {
   const [notice, setNotice] = useState('');
   const [randomSymbols, setRandomSymbols] = useState([]);
   const { market, changes } = useMarketStream();
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('cryptflow_theme') || 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cryptflow_theme', theme);
+      if (theme === 'light') {
+        document.body.classList.add('light');
+      } else {
+        document.body.classList.remove('light');
+      }
+    } catch (err) {
+      console.error("Failed to apply theme", err);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     if (randomSymbols.length === 0 && market?.prices) {
@@ -82,168 +106,184 @@ export default function AuthPage({ onAuth }) {
   })();
 
   return (
-    <main className="grid-lines min-h-screen grid lg:grid-cols-[1.15fr_.85fr]">
-      {/* Left Panel */}
-      <section className="hidden lg:flex flex-col justify-between p-14 border-r border-white/10">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="CryptFlow Logo" className="h-12 w-12 object-contain" />
-          <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
-        </div>
-        <div className="mt-8 mb-auto">
-          <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em] text-slate-100">
-            {t('auth.moveWithMarket')}<br />
-            <span className="text-gradient">{t('auth.learnWithoutRisk')}</span>
-          </h1>
-          <p className="mt-4 max-w-lg text-lg leading-8 text-slate-400">
-            {t('auth.heroDescription')}
-          </p>
+    <div className="relative">
+      <div className="absolute top-5 right-5 z-50">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="text-slate-400 hover:text-[#00d8f6] transition-colors p-2.5 rounded-full hover:bg-white/5 flex items-center justify-center bg-black/10 backdrop-blur-md border border-white/10"
+          title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        >
+          {theme === 'dark' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          )}
+        </button>
+      </div>
+      <main className="grid-lines min-h-screen grid lg:grid-cols-[1.15fr_.85fr]">
+        {/* Left Panel */}
+        <section className="hidden lg:flex flex-col justify-between p-14 border-r border-white/10">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="CryptFlow Logo" className="h-12 w-12 object-contain" />
+            <span className="text-xl font-black tracking-tight">CRYPTFLOW</span>
+          </div>
+          <div className="mt-8 mb-auto">
+            <h1 className="max-w-xl text-6xl font-black leading-[.98] tracking-[-.05em] text-slate-100">
+              {t('auth.moveWithMarket')}<br />
+              <span className="text-gradient">{t('auth.learnWithoutRisk')}</span>
+            </h1>
+            <p className="mt-4 max-w-lg text-lg leading-8 text-slate-400">
+              {t('auth.heroDescription')}
+            </p>
 
-          {/* Live Market Tickers */}
-          <div className="mt-5 max-w-md rounded-2xl bg-[#081522]/40 p-3 border border-white/5 overflow-hidden h-[300px] relative [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]">
-            <div className="animate-marquee-vertical flex flex-col gap-4 py-1">
-              {displayCoins.map((item, idx) => {
-                const symbol = item.symbol;
-                const colorClass = [
-                  'bg-amber-400/20 text-amber-300 border border-amber-500/20',
-                  'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
-                  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
-                ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
+            {/* Live Market Tickers */}
+            <div className="mt-5 max-w-md rounded-2xl bg-[#081522]/40 p-3 border border-white/5 overflow-hidden h-[300px] relative [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]">
+              <div className="animate-marquee-vertical flex flex-col gap-4 py-1">
+                {displayCoins.map((item, idx) => {
+                  const symbol = item.symbol;
+                  const colorClass = [
+                    'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                    'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                    'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+                  ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
 
-                return (
-                  <TickerItem
-                    key={`${symbol}-1`}
-                    symbol={symbol}
-                    price={item.price}
-                    change={item.change}
-                    coinName={COIN_NAMES[symbol] || symbol}
-                    colorClass={colorClass}
-                  />
-                );
-              })}
-              {displayCoins.map((item, idx) => {
-                const symbol = item.symbol;
-                const colorClass = [
-                  'bg-amber-400/20 text-amber-300 border border-amber-500/20',
-                  'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
-                  'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
-                ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
+                  return (
+                    <TickerItem
+                      key={`${symbol}-1`}
+                      symbol={symbol}
+                      price={item.price}
+                      change={item.change}
+                      coinName={COIN_NAMES[symbol] || symbol}
+                      colorClass={colorClass}
+                    />
+                  );
+                })}
+                {displayCoins.map((item, idx) => {
+                  const symbol = item.symbol;
+                  const colorClass = [
+                    'bg-amber-400/20 text-amber-300 border border-amber-500/20',
+                    'bg-indigo-400/20 text-indigo-300 border border-indigo-500/20',
+                    'bg-fuchsia-400/20 text-fuchsia-300 border border-fuchsia-500/20'
+                  ][idx % 3] || 'bg-slate-400/20 text-slate-300 border border-slate-500/20';
 
-                return (
-                  <TickerItem
-                    key={`${symbol}-2`}
-                    symbol={symbol}
-                    price={item.price}
-                    change={item.change}
-                    coinName={COIN_NAMES[symbol] || symbol}
-                    colorClass={colorClass}
-                  />
-                );
-              })}
+                  return (
+                    <TickerItem
+                      key={`${symbol}-2`}
+                      symbol={symbol}
+                      price={item.price}
+                      change={item.change}
+                      coinName={COIN_NAMES[symbol] || symbol}
+                      colorClass={colorClass}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-        <p className="text-sm text-slate-600 mt-6">
-          {t('auth.disclaimer')}
-        </p>
-      </section>
-
-      {/* Right Panel */}
-      <section className="flex items-center justify-center p-6">
-        <div className="card w-full max-w-md rounded-3xl p-7 sm:p-10">
-          <div className="mb-8 lg:hidden flex items-center gap-2 font-black text-xl">
-            <img src="/logo.png" alt="CryptFlow Logo" className="h-8 w-8 object-contain" />
-            <span className="text-gradient">CRYPTFLOW</span>
-          </div>
-
-          <p className="label">
-            {mode === 'login' ? t('auth.welcomeBack') : t('auth.startYourLab')}
+          <p className="text-sm text-slate-600 mt-6">
+            {t('auth.disclaimer')}
           </p>
-          <h2 className="mt-2 text-3xl font-black">
-            {mode === 'login' ? t('auth.returnToMarket') : t('auth.createAccount')}
-          </h2>
-          <p className="mt-2 text-slate-400">
-            {mode === 'login' ? t('auth.secureEntry') : t('auth.autoProvisioned')}
-          </p>
+        </section>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
-            {mode === 'register' && (
-              <>
-                <label className="block">
-                  <span className="mb-2 block text-sm text-slate-300">{t('auth.firstName')}</span>
-                  <input
-                    className="input"
-                    type="text"
-                    required
-                    value={form.firstName}
-                    onChange={e => setForm({ ...form, firstName: e.target.value })}
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm text-slate-300">{t('auth.lastName')}</span>
-                  <input
-                    className="input"
-                    type="text"
-                    required
-                    value={form.lastName}
-                    onChange={e => setForm({ ...form, lastName: e.target.value })}
-                  />
-                </label>
-              </>
-            )}
-            <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">{t('auth.email')}</span>
-              <input
-                className="input"
-                type="email"
-                required
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm text-slate-300">{t('auth.password')}</span>
-              <input
-                className="input"
-                type="password"
-                minLength="8"
-                required
-                value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-              />
-            </label>
+        {/* Right Panel */}
+        <section className="flex items-center justify-center p-6">
+          <div className="card w-full max-w-md rounded-3xl p-7 sm:p-10">
+            <div className="mb-8 lg:hidden flex items-center gap-2 font-black text-xl">
+              <img src="/logo.png" alt="CryptFlow Logo" className="h-8 w-8 object-contain" />
+              <span className="text-gradient">CRYPTFLOW</span>
+            </div>
 
-            {error && (
-              <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">
-                {error}
-              </p>
-            )}
-            {notice && (
-              <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-300">
-                {notice}
-              </p>
-            )}
+            <p className="label">
+              {mode === 'login' ? t('auth.welcomeBack') : t('auth.startYourLab')}
+            </p>
+            <h2 className="mt-2 text-3xl font-black">
+              {mode === 'login' ? t('auth.returnToMarket') : t('auth.createAccount')}
+            </h2>
+            <p className="mt-2 text-slate-400">
+              {mode === 'login' ? t('auth.secureEntry') : t('auth.autoProvisioned')}
+            </p>
+
+            <form onSubmit={submit} className="mt-8 space-y-4">
+              {mode === 'register' && (
+                <>
+                  <label className="block">
+                    <span className="mb-2 block text-sm text-slate-300">{t('auth.firstName')}</span>
+                    <input
+                      className="input"
+                      type="text"
+                      required
+                      value={form.firstName}
+                      onChange={e => setForm({ ...form, firstName: e.target.value })}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm text-slate-300">{t('auth.lastName')}</span>
+                    <input
+                      className="input"
+                      type="text"
+                      required
+                      value={form.lastName}
+                      onChange={e => setForm({ ...form, lastName: e.target.value })}
+                    />
+                  </label>
+                </>
+              )}
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">{t('auth.email')}</span>
+                <input
+                  className="input"
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-300">{t('auth.password')}</span>
+                <input
+                  className="input"
+                  type="password"
+                  minLength="8"
+                  required
+                  value={form.password}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                />
+              </label>
+
+              {error && (
+                <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">
+                  {error}
+                </p>
+              )}
+              {notice && (
+                <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-300">
+                  {notice}
+                </p>
+              )}
+
+              <button
+                disabled={busy}
+                className="btn btn-primary w-full"
+              >
+                {busy ? t('auth.processing') : mode === 'login' ? t('auth.login') : t('auth.register')}
+              </button>
+            </form>
 
             <button
-              disabled={busy}
-              className="btn btn-primary w-full"
+              className="mt-6 w-full text-sm text-slate-400 hover:text-white"
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login');
+                setError('');
+                setNotice('');
+              }}
             >
-              {busy ? t('auth.processing') : mode === 'login' ? t('auth.login') : t('auth.register')}
+              {mode === 'login' ? t('auth.noAccountRegister') : t('auth.haveAccountLogin')}
             </button>
-          </form>
-
-          <button
-            className="mt-6 w-full text-sm text-slate-400 hover:text-white"
-            onClick={() => {
-              setMode(mode === 'login' ? 'register' : 'login');
-              setError('');
-              setNotice('');
-            }}
-          >
-            {mode === 'login' ? t('auth.noAccountRegister') : t('auth.haveAccountLogin')}
-          </button>
-        </div>
-      </section>
-    </main>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
 
