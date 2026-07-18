@@ -553,7 +553,7 @@ export default function DashboardPage({ onLogout }) {
         )}
         {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} currentLang={currentLang} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
-        {tab === 'orders' && <OrdersPanel market={market} t={t} dateLocale={dateLocale} />}
+        {tab === 'orders' && <OrdersPanel market={market} t={t} dateLocale={dateLocale} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} />}
       </main>
 
       {modal && (
@@ -970,7 +970,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
   );
 }
 
-function OrdersPanel({ market, t, dateLocale }) {
+function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
   const [activeOrders, setActiveOrders] = useState([]);
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [triggeredAlerts, setTriggeredAlerts] = useState([]);
@@ -1071,7 +1071,7 @@ function OrdersPanel({ market, t, dateLocale }) {
                   onChange={e => setSymbol(e.target.value)} 
                   className="input py-2 text-xs bg-[#040a15]"
                 >
-                  {SUPPORTED_SYMBOLS.map(sym => (
+                  {symbols.map(sym => (
                     <option key={sym} value={sym} className="bg-[#040a15]">{sym}</option>
                   ))}
                 </select>
