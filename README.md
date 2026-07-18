@@ -191,8 +191,3 @@ Ensure Docker/Docker Compose and Node.js (v20+) are installed.
   cd frontend
   npm run build
   ```
-
----
-
-## 🔒 Security Notice
-Never commit local `.env` files, actual API keys, or PDFs containing sensitive project credentials to version control. These patterns are automatically excluded via `.gitignore`.
