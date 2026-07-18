@@ -4,15 +4,68 @@
 
 :root {
   font-family: 'Inter', system-ui, sans-serif;
-  color: #e2e8f0;
-  background-color: #040a15;
   font-synthesis: none;
 
   --cyan: #00d8f6;
   --teal: #1fc8a4;
   --green: #10d98e;
   --red: #ff4b6e;
-  --bg-dark: #040a15;
+  
+  --bg-color: #040a15;
+  --text-color: #e2e8f0;
+  --card-bg: rgba(10, 20, 38, 0.65);
+  --card-border: rgba(0, 216, 246, 0.12);
+  --card-hover-border: rgba(0, 216, 246, 0.25);
+  --input-bg: rgba(8, 16, 32, 0.75);
+  --input-border: rgba(0, 216, 246, 0.15);
+  --input-text: #f8fafc;
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(0, 216, 246, 0.08), transparent 45%),
+                 radial-gradient(circle at 90% 10%, rgba(16, 217, 142, 0.08), transparent 45%),
+                 radial-gradient(circle at 50% 90%, rgba(255, 75, 110, 0.05), transparent 50%),
+                 #040a15;
+}
+
+body.light {
+  --bg-color: #f1f5f9;
+  --text-color: #0f172a;
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --card-hover-border: rgba(0, 216, 246, 0.4);
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.15);
+  --input-text: #0f172a;
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(0, 216, 246, 0.03), transparent 45%),
+                 radial-gradient(circle at 90% 10%, rgba(16, 217, 142, 0.03), transparent 45%),
+                 #f1f5f9;
+}
+
+body.light .text-white {
+  color: #0f172a !important;
+}
+
+body.light .text-slate-300,
+body.light .text-slate-400,
+body.light .text-slate-500 {
+  color: #475569 !important;
+}
+
+body.light .bg-\[\#07111f\]\/90,
+body.light .bg-\[\#07111f\],
+body.light .bg-\[\#0a1929\],
+body.light .bg-\[\#081522\],
+body.light .bg-\[\#081522\]\/50,
+body.light .bg-\[\#0c1a2a\] {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light .border-white\/10,
+body.light .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light .bg-\[\#0c1a2a\] .text-\[\#00d8f6\] {
+  color: #0284c7 !important;
 }
 
 * {
@@ -28,11 +81,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(circle at 10% 20%, rgba(0, 216, 246, 0.08), transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(16, 217, 142, 0.08), transparent 45%),
-    radial-gradient(circle at 50% 90%, rgba(255, 75, 110, 0.05), transparent 50%),
-    #040a15;
+  background: var(--bg-gradient);
   pointer-events: none;
 }
 
@@ -40,7 +89,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #040a15;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 button, input {
@@ -48,11 +99,11 @@ button, input {
 }
 
 .card {
-  background: rgba(10, 20, 38, 0.65);
-  border: 1px solid rgba(0, 216, 246, 0.12);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
