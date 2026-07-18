@@ -1509,6 +1509,7 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
 }
 
 function NewsPanel({ t, dateLocale }) {
+  const { i18n } = useTranslation();
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(6);
