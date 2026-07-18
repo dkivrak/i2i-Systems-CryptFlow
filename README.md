@@ -1,91 +1,135 @@
-# CryptFlow
+# CryptFlow 🚀
+### Paper Trading & AI Market Assistant
 
-CryptFlow, sanal USD bakiyesiyle BTC, ETH ve SOL alım-satımı yapılabilen eğitim amaçlı bir paper-trading uygulamasıdır. Spring Boot backend sentetik fiyatları üretir, Redis üzerinden sunar, PostgreSQL'de geçmişi saklar ve STOMP ile React arayüzüne yayınlar. Gemini sohbeti yalnızca kullanıcı isteği üzerine çalışır.
+> [!NOTE]
+> This project has been developed as part of the **i2i Academy Internship Program** as a paper-trading web application allowing users to simulate real-time cryptocurrency trading using a virtual USD balance, complete with generative AI market insights.
 
+---
 
-## Mimari
+## 🏛️ Architecture and Tech Stack
 
-- **Frontend:** React, Vite, JavaScript, Tailwind CSS, `@stomp/stompjs`
-- **Backend:** Java 21, Spring Boot 3 modular monolith
-- **Kalıcı veri:** PostgreSQL + Flyway
-- **Geçici veri:** Redis oturumları ve güncel fiyatlar
-- **Canlı akış:** Native WebSocket + STOMP (`/ws`, `/topic/market/prices`)
-- **AI:** Google Gemini REST API
+The application is built on a high-performance, modular, and scalable architecture:
 
-Ticker Engine her 15 saniyede BTC, ETH ve SOL fiyatlarını değiştirir. Aynı zaman damgasına sahip snapshot'lar önce PostgreSQL'e yazılır, güncel liste Redis'te overwrite edilir ve ardından STOMP topic'ine yayınlanır. Trade işlemleri wallet ve asset satırlarını pessimistic-write kilidiyle alır ve tek transaction içinde tamamlanır.
+- **Frontend:** React, Vite, JavaScript, Tailwind CSS, `i18next` (Internationalization), `react-markdown`
+- **Backend:** Java 21, Spring Boot 3 (Modular Monolith)
+- **Database & Migration:** PostgreSQL + Flyway (Database schema migration manager)
+- **Caching & Session Storage:** Redis (Stores user sessions and active live prices)
+- **Live Stream:** Native WebSockets (`/ws` endpoint using custom Spring `TextWebSocketHandler`)
+- **Generative AI:** Google Gemini API (Powering the conversational chatbot assistant and portfolio summary insights)
 
-## Yerel kurulum
+---
 
-Gereksinimler: Docker/Docker Compose, frontend geliştirme için Node.js 20+ ve npm.
+## ✨ Key Features
 
-```bash
-cp .env.example .env
-docker compose up --build
-```
+### 1. Dynamic Binance Integration & Live Streams 📈
+* **Dynamic Asset Listing:** At startup, the application fetches all active `USDT` trading pairs directly from the Binance REST API (`https://api.binance.com/api/v3/ticker/price`) to populate the system dynamically.
+* **WebSocket Price Stream:** Subscribes to the global Binance `!miniTicker@arr` WebSocket channel. Received price ticks are cached in Redis and streamed instantly to all connected clients via native WebSockets.
+* **Stream Health Monitoring (Stale Connection Detection):** If the WebSocket connection is interrupted, the system automatically detects the stale state and schedules reconnects every 5 seconds.
 
-Bu komut backend, PostgreSQL ve Redis'i başlatır. Flyway şemayı otomatik oluşturur. Backend `http://localhost:8080`, Swagger UI `http://localhost:8080/swagger-ui.html` adresindedir.
+### 2. 30-Second Price Locking (Price Lock) ⏳
+* The moment a user opens the buy/sell trade modal, the active coin price is **locked for 30 seconds**.
+* A flashing countdown timer is displayed inside the modal indicating the remaining time.
+* Once the 30-second timer hits zero, the locked price expires, the **"Execute Order" button is automatically disabled**, and the user is notified that the price lock is no longer valid.
 
-Frontend için ikinci terminal:
+### 3. Favorites System & Status Dropdown 💖
+* Market cards feature heart toggle buttons in their top-right corner to add/remove coins from favorites. The state is persisted in `localStorage`.
+* A Heart button next to the profile icon in the header opens a dedicated **Favorites Dropdown Window** displaying live prices and percent changes for all favorited assets.
+* Clicking any favorited asset inside the dropdown immediately opens its trading modal.
+* The header heart icon utilizes a breathing/pulsing red dot badge instead of a raw counter for a premium aesthetic.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### 4. Gemini AI Chatbot Widget 🤖
+* A chat widget in the bottom-right corner integrates the Google Gemini API.
+* The assistant automatically analyzes the user's active portfolio allocation, trade transaction history, and current market feeds to provide contextual investment summaries and answers.
+* Supports rich Markdown formatting for all chat replies.
 
-Arayüz `http://localhost:5173` adresinde açılır.
+### 5. Multilingual Support (TR / EN i18n) 🌐
+* The application supports bilingual (Turkish and English) localization powered by `react-i18next`.
+* Language configuration can be swapped instantly within the Account Settings (Profile Modal) page.
 
-Kimlik doğrulama rotaları `/login` ve `/dashboard` olarak ayrılmıştır. Başarılı login sonrasında UUID token `sessionStorage` içindeki `cryptflow_token` anahtarına yazılır ve kullanıcı `/dashboard` rotasına yönlendirilir. Aynı sekmede sayfa yenilendiğinde geçerli token korunur.
+### 6. Premium Dark Glassmorphic Design 🎨
+* Curated dark color scheme matching the custom brand logo.
+* Premium micro-animations, glassmorphic card overlays, and clean layouts.
+* Login page features an infinite vertical scrolling marquee ticker showing 9 randomly selected coins from the live stream.
 
-## Environment variable'lar
+---
 
-Kök `.env.example` dosyasını `.env` olarak kopyalayın. Gerçek `.env` Git tarafından dışlanır.
+## 🗄️ Database Migrations (Flyway)
 
-| Değişken | Açıklama |
-|---|---|
-| `POSTGRES_*` | PostgreSQL veritabanı, kullanıcı, parola ve host portu |
-| `SPRING_DATASOURCE_*` | Backend JDBC bağlantısı |
-| `SPRING_DATA_REDIS_*` | Redis bağlantısı |
-| `SESSION_TTL_HOURS` | Redis session TTL; varsayılan 24 saat |
-| `FRONTEND_ORIGINS` | CORS ve WebSocket için virgülle ayrılmış izinli origin listesi |
-| `TICKER_*` | Scheduler aralığı, maksimum değişim ve başlangıç fiyatları |
-| `GEMINI_API_KEY` | Gemini API anahtarı; boşsa yalnız chat devre dışıdır |
-| `GEMINI_MODEL` | Kullanılacak güncel Gemini model adı |
-| `GEMINI_TIMEOUT_SECONDS` | Gemini çağrı timeout'u |
+The database schema is managed incrementally through Flyway migrations:
 
-Frontend gerekirse `frontend/.env.local` içinde `VITE_API_BASE_URL=http://localhost:8080/api` ve `VITE_WS_URL=ws://localhost:8080/ws` tanımlayabilir. Örnek değerler [frontend/.env.example](frontend/.env.example) dosyasındadır.
+| Version | Migration Purpose | Description |
+|---|---|---|
+| `V1__initial_schema.sql` | Base Schema | Creates User, Wallet, Portfolio Assets, and Trade Transactions tables. |
+| `V2__add_new_symbols.sql` | Symbol CHECK Constraints | Adds database-level constraints specifying supported asset symbols. |
+| `V3__remove_symbol_constraints.sql` | Dynamic Symbols Support | Removes the hardcoded CHECK constraints to allow dynamic Binance symbols. |
+| `V4__widen_symbol_column.sql` | Symbol Column Expansion | Widens the `symbol` columns to `VARCHAR(50)` to accommodate long Binance trade symbols. |
+| `V5__increase_price_precision.sql` | Decimal Precision Expansion | Expands column definitions (`price_usd` and `unit_price_usd`) to `NUMERIC(28,8)` to prevent rounding cheap assets (e.g. SHIB) to 0. |
 
-## API özeti
+---
 
-Public:
+## ⚙️ Environment Variables
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/market/prices`
+Copy the root `.env.example` file to `.env` and fill in your values.
 
-`Authorization: Bearer <token>` gerektiren endpoint'ler:
+| Variable Name | Default Value | Description |
+|---|---|---|
+| `POSTGRES_DB` | `cryptflow` | PostgreSQL database name |
+| `POSTGRES_USER` | `cryptflow` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | `change-me` | PostgreSQL user password |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://postgres:5432/cryptflow` | JDBC datasource URL |
+| `SPRING_DATA_REDIS_HOST` | `redis` | Redis server hostname |
+| `SPRING_DATA_REDIS_PORT` | `6379` | Redis server port |
+| `SESSION_TTL_HOURS` | `24` | User session TTL in Redis (Hours) |
+| `FRONTEND_ORIGINS` | `http://localhost:5173` | Allowed CORS origins (comma-separated) |
+| `GEMINI_API_KEY` | *(Empty)* | Google Gemini API key |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | Active Gemini API model |
+| `TICKER_INTERVAL_MS` | `15000` | Price update loop interval (Milliseconds) |
 
-- `POST /api/auth/logout`
-- `GET /api/me`
-- `GET /api/portfolio`
-- `POST /api/trades`
-- `GET /api/trades?page=0&size=20`
-- `POST /api/chat/query`
+---
 
-Swagger/OpenAPI: `/swagger-ui.html` ve `/v3/api-docs`.
+## 🛠️ Installation and Setup
 
-## WebSocket akışı
+### Full Containerized Setup (Recommended)
+Ensure Docker/Docker Compose and Node.js (v20+) are installed.
 
-Frontend ilk fiyatları `GET /api/market/prices` ile alır, sonra `ws://localhost:8080/ws` bağlantısını açıp `/topic/market/prices` kanalına abone olur. Bağlantı kesilirse istemci 5 saniye sonra otomatik yeniden bağlanır ve son bilinen fiyatları göstermeye devam eder.
+1. Create your `.env` configuration file:
+   ```bash
+   cp .env.example .env
+   ```
 
-## Test ve build
+2. Spin up the backend, database, and caching servers:
+   ```bash
+   docker compose up -d --build
+   ```
+   *This starts Postgres, Redis, and the Spring Boot API, automatically applying all database schema migrations via Flyway.*
+   * **Backend API Base URL:** `http://localhost:8080`
+   * **Swagger UI Documentation:** `http://localhost:8080/swagger-ui.html`
 
-```bash
-cd backend
-mvn test
+3. Start the React frontend application:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev -- --port 5173
+   ```
+   * **Frontend Application URL:** `http://localhost:5173`
 
-cd ../frontend
-npm run build
-```
+---
 
-PDF, ödev ekran görüntüleri ve gerçek secret'lar repository'ye eklenmemelidir.
+## 🧪 Testing and Production Build
+
+* **Run Backend Unit & Integration Tests:**
+  ```bash
+  cd backend
+  ./mvnw clean test
+  ```
+
+* **Build Frontend for Production:**
+  ```bash
+  cd frontend
+  npm run build
+  ```
+
+---
+
+## 🔒 Security Notice
+Never commit local `.env` files, actual API keys, or PDFs containing sensitive project credentials to version control. These patterns are automatically excluded via `.gitignore`.
