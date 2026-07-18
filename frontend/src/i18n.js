@@ -89,7 +89,8 @@ const resources = {
         hoverChart: 'Inspect Allocation',
         hoverDesc: 'Hover over segments to view details.',
         allocation: 'allocation',
-        searchPlaceholder: 'Search coin... (e.g. BTC, SOL)'
+        searchPlaceholder: 'Search coin... (e.g. BTC, SOL)',
+        tabOrders: 'Alarms & Limits'
       },
 
       // --- Chat Widget ---
@@ -283,7 +284,8 @@ const resources = {
         hoverChart: 'Dağılımı İncele',
         hoverDesc: 'Grafik dilimlerinin üzerine gelerek detayları görün.',
         allocation: 'oranında',
-        searchPlaceholder: 'Coin ara... (örn: BTC, SOL)'
+        searchPlaceholder: 'Coin ara... (örn: BTC, SOL)',
+        tabOrders: 'Alarmlar & Limitler'
       },
 
       // --- Chat Widget ---

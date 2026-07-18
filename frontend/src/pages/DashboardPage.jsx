@@ -476,7 +476,7 @@ export default function DashboardPage({ onLogout }) {
             ['market', t('dashboard.tabMarket')],
             ['portfolio', t('dashboard.tabPortfolio')],
             ['history', t('dashboard.tabTransactions')],
-            ['orders', t('dashboard.tabOrders', { defaultValue: 'Alarmlar & Limitler' })]
+            ['orders', t('dashboard.tabOrders', { defaultValue: 'Alarms & Limits' })]
           ].map(([id, label]) => (
             <button
               key={id}
