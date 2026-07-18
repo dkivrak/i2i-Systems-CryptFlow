@@ -647,15 +647,18 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                   <CoinLogo symbol={s} index={globalIndex} />
                 </div>
                 <p className="mt-6 label">{s} / USD</p>
-                <div className="mt-1 flex items-baseline justify-between">
+                <div className="mt-1 flex items-center justify-between gap-2">
                   <p className="text-3xl font-black">{money(market?.prices?.[s])}</p>
-                  {changes?.[s] !== undefined && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      changes[s] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                    }`}>
-                      {changes[s] >= 0 ? '+' : ''}{changes[s].toFixed(2)}%
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <MiniSparkline symbol={s} currentPrice={market?.prices?.[s]} isPositive={changes?.[s] >= 0} />
+                    {changes?.[s] !== undefined && (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        changes[s] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}>
+                        {changes[s] >= 0 ? '+' : ''}{changes[s].toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
                   {t('dashboard.holding')}{' '}
@@ -1658,5 +1661,78 @@ function CoinLogo({ symbol }) {
       className="h-11 w-11 rounded-full object-contain"
       loading="lazy"
     />
+  );
+}
+
+function MiniSparkline({ symbol, currentPrice, isPositive }) {
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    async function loadHistory() {
+      try {
+        const data = await api(`/market/history/${symbol}`);
+        if (active && data) {
+          const prices = data.map(d => Number(d.priceUsd));
+          setHistory(prices);
+        }
+      } catch (err) {
+        console.error("Failed to load sparkline history for " + symbol, err);
+      }
+    }
+    loadHistory();
+    return () => { active = false; };
+  }, [symbol]);
+
+  useEffect(() => {
+    if (currentPrice === undefined || currentPrice === null) return;
+    const priceNum = Number(currentPrice);
+    setHistory(prev => {
+      if (prev.length === 0) return [priceNum];
+      if (prev[prev.length - 1] === priceNum) return prev;
+      return [...prev, priceNum].slice(-40);
+    });
+  }, [currentPrice]);
+
+  const svgPath = useMemo(() => {
+    if (history.length < 2) return '';
+    const min = Math.min(...history);
+    const max = Math.max(...history);
+    const range = max - min === 0 ? 1 : max - min;
+
+    const width = 60;
+    const height = 24;
+    const padding = 2;
+
+    const points = history.map((val, index) => {
+      const x = (index / (history.length - 1)) * (width - padding * 2) + padding;
+      const y = height - ((val - min) / range) * (height - padding * 2) - padding;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+
+    return `M ${points.join(' L ')}`;
+  }, [history]);
+
+  if (history.length < 2) {
+    return (
+      <div className="w-[60px] h-[24px] flex items-center justify-center opacity-10">
+        <div className="w-full h-[1px] bg-slate-400 border-t border-dashed" />
+      </div>
+    );
+  }
+
+  const strokeColor = isPositive ? '#34d399' : '#f87171';
+
+  return (
+    <svg width="60" height="24" className="overflow-visible select-none pointer-events-none">
+      <path
+        d={svgPath}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
