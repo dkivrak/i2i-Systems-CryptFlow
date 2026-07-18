@@ -10,6 +10,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Orchestrates periodic price updates.
@@ -93,6 +94,15 @@ public class TickerEngine {
     if (!prices.isEmpty()) {
       writer.write(prices, Instant.now());
     }
+  }
+
+  @Scheduled(cron = "0 0 * * * *") // Runs every hour to clean up old data
+  @Transactional
+  public void cleanup() {
+    try {
+      Instant cutoff = Instant.now().minusSeconds(24 * 3600); // 24 hours ago
+      snapshots.deleteByRecordedAtBefore(cutoff);
+    } catch (Exception ignored) {}
   }
 
   private BigDecimal getInitialPrice(String symbol) {

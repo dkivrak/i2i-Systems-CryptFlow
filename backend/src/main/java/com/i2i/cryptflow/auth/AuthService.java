@@ -49,9 +49,6 @@ public class AuthService {
     var user = users.save(new User(email, passwords.encode(password)));
     var balance = generateInitialBalance();
     var wallet = wallets.save(new Wallet(user, balance));
-    // Initialize portfolio with one entry per supported asset symbol
-    for (var symbol : supportedSymbols.getSymbols())
-      assets.save(new PortfolioAsset(wallet, symbol));
     return new RegisterResult(user.getId(), user.getEmail(), balance);
   }
 
