@@ -260,7 +260,7 @@ export default function DashboardPage({ onLogout }) {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-80 z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
                     <h3 className="text-sm font-bold text-white">{t('dashboard.notifications')}</h3>
                     <button onClick={() => setShowNotifications(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
@@ -321,7 +321,7 @@ export default function DashboardPage({ onLogout }) {
               </button>
 
               {showFavoritesDropdown && (
-                <div className="absolute right-0 top-8 z-50 w-80 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-80 z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
                     <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                       <span className="text-[#ff4b6e]">♥</span> {t('dashboard.favorites')}
@@ -382,7 +382,7 @@ export default function DashboardPage({ onLogout }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-5 py-8">
+      <main className="mx-auto max-w-7xl px-5 pt-8 pb-28 sm:pb-8">
         {/* Welcome Header */}
         <section className="mb-6">
           <p className="label">{t('dashboard.portfolioOverview')}</p>
