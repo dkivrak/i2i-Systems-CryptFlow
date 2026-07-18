@@ -671,6 +671,7 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
 }
 
 function EquityChart({ history }) {
+  const { t } = useTranslation();
   if (!history || history.length < 2) return null;
   const values = history.map(h => Number(h.value));
   const minVal = Math.min(...values) * 0.99;
@@ -696,8 +697,8 @@ function EquityChart({ history }) {
   return (
     <div className="card rounded-2xl p-6 h-full flex flex-col justify-between">
       <div className="flex items-center justify-between">
-        <p className="label">PORTFOLIO VALUE OVER TIME</p>
-        <span className="text-[10px] font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">LIVE CURVE</span>
+        <p className="label">{t('dashboard.equityTitle', { defaultValue: 'PORTFOLIO VALUE OVER TIME' })}</p>
+        <span className="text-[10px] font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">{t('dashboard.liveCurve', { defaultValue: 'LIVE CURVE' })}</span>
       </div>
       <div className="relative mt-4 flex-1 h-[80px]">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
@@ -764,22 +765,22 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#00d8f6]/5 rounded-full filter blur-3xl pointer-events-none" />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">AI ROBO-ADVISOR</span>
-              <span className="text-slate-500 text-xs">✦ Gemini Insights</span>
+              <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">{t('dashboard.aiRoboAdvisor', { defaultValue: 'AI ROBO-ADVISOR' })}</span>
+              <span className="text-slate-500 text-xs">{t('dashboard.geminiInsights', { defaultValue: '✦ Gemini Insights' })}</span>
             </div>
             {aiLoading ? (
               <div className="mt-6 flex items-center gap-3 text-slate-400">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#00d8f6] border-t-transparent" />
-                <span className="text-xs">Analyzing portfolio rebalancing...</span>
+                <span className="text-xs">{t('dashboard.analyzingPortfolio', { defaultValue: 'Analyzing portfolio rebalancing...' })}</span>
               </div>
             ) : (
               <p className="mt-4 text-xs sm:text-sm text-slate-300 leading-relaxed italic">
-                "{aiAdvice || t('portfolio.aiAdviceDefault', { defaultValue: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!' })}"
+                "{aiAdvice || t('dashboard.aiAdviceDefault', { defaultValue: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!' })}"
               </p>
             )}
           </div>
           <div className="mt-4 border-t border-white/5 pt-2 text-[10px] text-slate-500">
-            Insights update every 10 minutes based on live market pricing and holdings.
+            {t('dashboard.insightsUpdateNote', { defaultValue: 'Insights update every 10 minutes based on live market pricing and holdings.' })}
           </div>
         </div>
       </div>

@@ -90,7 +90,14 @@ const resources = {
         hoverDesc: 'Hover over segments to view details.',
         allocation: 'allocation',
         searchPlaceholder: 'Search coin... (e.g. BTC, SOL)',
-        tabOrders: 'Alarms & Limits'
+        tabOrders: 'Alarms & Limits',
+        equityTitle: 'PORTFOLIO VALUE OVER TIME',
+        liveCurve: 'LIVE CURVE',
+        aiRoboAdvisor: 'AI ROBO-ADVISOR',
+        geminiInsights: '✦ Gemini Insights',
+        analyzingPortfolio: 'Analyzing portfolio rebalancing...',
+        insightsUpdateNote: 'Insights update every 10 minutes based on live market pricing and holdings.',
+        aiAdviceDefault: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!'
       },
 
       // --- Chat Widget ---
@@ -286,7 +293,14 @@ const resources = {
         hoverDesc: 'Grafik dilimlerinin üzerine gelerek detayları görün.',
         allocation: 'oranında',
         searchPlaceholder: 'Coin ara... (örn: BTC, SOL)',
-        tabOrders: 'Alarmlar & Limitler'
+        tabOrders: 'Alarmlar & Limitler',
+        equityTitle: 'ZAMAN İÇİNDEKİ PORTFÖY DEĞERİ',
+        liveCurve: 'ANLIK GRAFİK',
+        aiRoboAdvisor: 'YAPAY ZEKA DANIŞMANI',
+        geminiInsights: '✦ Gemini Analizi',
+        analyzingPortfolio: 'Portföy dengesi analiz ediliyor...',
+        insightsUpdateNote: 'Analizler, anlık piyasa fiyatlarına ve varlıklarınıza göre her 10 dakikada bir güncellenir.',
+        aiAdviceDefault: 'Portföyünüz şu anda sadece nakitten oluşuyor. Kişiselleştirilmiş analizler almak için kripto varlık edinin!'
       },
 
       // --- Chat Widget ---

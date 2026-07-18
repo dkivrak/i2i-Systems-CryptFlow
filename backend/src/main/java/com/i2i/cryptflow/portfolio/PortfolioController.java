@@ -22,7 +22,7 @@ public class PortfolioController {
   private final Map<UUID, AdviceCache> adviceCache = new ConcurrentHashMap<>();
   private static final long CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-  private record AdviceCache(String advice, long timestamp) {}
+  private record AdviceCache(String advice, String lang, long timestamp) {}
 
   public PortfolioController(
       WalletRepository wallets,
@@ -61,7 +61,7 @@ public class PortfolioController {
   Map<String, String> getAiAdvice(@AuthenticationPrincipal UUID userId, @RequestParam(defaultValue = "en") String lang) {
     long now = System.currentTimeMillis();
     var cached = adviceCache.get(userId);
-    if (cached != null && (now - cached.timestamp() < CACHE_TTL_MS)) {
+    if (cached != null && cached.lang().equalsIgnoreCase(lang) && (now - cached.timestamp() < CACHE_TTL_MS)) {
       return Map.of("advice", cached.advice());
     }
 
@@ -72,7 +72,7 @@ public class PortfolioController {
     var response = chatService.query(userId, prompt);
     String cleanAdvice = response.answer().replace("Educational purposes only — not financial advice.", "").trim();
     
-    adviceCache.put(userId, new AdviceCache(cleanAdvice, now));
+    adviceCache.put(userId, new AdviceCache(cleanAdvice, lang, now));
     return Map.of("advice", cleanAdvice);
   }
 
@@ -80,13 +80,25 @@ public class PortfolioController {
   List<EquityPoint> getEquityHistory(@AuthenticationPrincipal UUID userId) {
     var history = equityHistory.findByUserIdOrderByRecordedAtAsc(userId);
     if (history.isEmpty()) {
-      var wallet = wallets.findByUserId(userId).orElseThrow();
+      var totalValue = calculateTotalValue(userId);
       return List.of(
-          new EquityPoint(Instant.now().minusSeconds(3600 * 24), wallet.getUsdBalance()),
-          new EquityPoint(Instant.now(), wallet.getUsdBalance())
+          new EquityPoint(Instant.now().minusSeconds(3600 * 24), totalValue),
+          new EquityPoint(Instant.now(), totalValue)
       );
     }
     return history.stream().map(h -> new EquityPoint(h.getRecordedAt(), h.getTotalValue())).toList();
+  }
+
+  private BigDecimal calculateTotalValue(UUID userId) {
+    var wallet = wallets.findByUserId(userId).orElseThrow();
+    var prices = market.getCurrent().prices();
+    var assetTotal = assets.findByWalletIdOrderBySymbol(wallet.getId()).stream()
+        .map(a -> {
+          var price = prices.get(a.getSymbol());
+          return a.getQuantity().multiply(price);
+        })
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    return wallet.getUsdBalance().add(assetTotal);
   }
 
   public record EquityPoint(Instant time, BigDecimal value) {}
