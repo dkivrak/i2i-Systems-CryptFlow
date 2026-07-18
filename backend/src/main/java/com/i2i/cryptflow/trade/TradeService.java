@@ -1,6 +1,8 @@
 package com.i2i.cryptflow.trade;
 
 import com.i2i.cryptflow.market.MarketPriceService;
+import com.i2i.cryptflow.portfolio.EquityHistory;
+import com.i2i.cryptflow.portfolio.EquityHistoryRepository;
 import com.i2i.cryptflow.portfolio.PortfolioAsset;
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
 import com.i2i.cryptflow.shared.error.ApiException;
@@ -24,13 +26,22 @@ public class TradeService {
   private final TradeTransactionRepository trades;
   private final MarketPriceService market;
   private final ExternalPriceProvider supportedSymbols;
+  private final EquityHistoryRepository equityHistory;
 
-  public TradeService(WalletRepository wallets, PortfolioAssetRepository assets, TradeTransactionRepository trades, MarketPriceService market, ExternalPriceProvider supportedSymbols) {
+  public TradeService(
+      WalletRepository wallets,
+      PortfolioAssetRepository assets,
+      TradeTransactionRepository trades,
+      MarketPriceService market,
+      ExternalPriceProvider supportedSymbols,
+      EquityHistoryRepository equityHistory
+  ) {
     this.wallets = wallets;
     this.assets = assets;
     this.trades = trades;
     this.market = market;
     this.supportedSymbols = supportedSymbols;
+    this.equityHistory = equityHistory;
   }
 
   @Transactional
@@ -56,15 +67,49 @@ public class TradeService {
     if (side == TradeSide.BUY) {
       if (wallet.getUsdBalance().compareTo(total) < 0)
         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_FUNDS", "Insufficient USD balance for this transaction.");
+      
+      BigDecimal currentQty = asset.getQuantity();
+      BigDecimal currentAvg = asset.getAveragePrice();
+      if (currentAvg == null) currentAvg = BigDecimal.ZERO;
+      
+      BigDecimal nextQty = currentQty.add(quantity);
+      BigDecimal nextAvg = BigDecimal.ZERO;
+      if (nextQty.compareTo(BigDecimal.ZERO) > 0) {
+        BigDecimal currentTotalCost = currentQty.multiply(currentAvg);
+        BigDecimal transactionCost = quantity.multiply(price);
+        nextAvg = currentTotalCost.add(transactionCost).divide(nextQty, MAX_DECIMAL_PLACES, RoundingMode.HALF_UP);
+      }
+      
       wallet.setUsdBalance(wallet.getUsdBalance().subtract(total));
-      asset.setQuantity(asset.getQuantity().add(quantity));
+      asset.setQuantity(nextQty);
+      asset.setAveragePrice(nextAvg);
     } else {
       if (asset.getQuantity().compareTo(quantity) < 0)
         throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_ASSET_BALANCE", "Insufficient asset balance for sale.");
-      asset.setQuantity(asset.getQuantity().subtract(quantity));
+      
+      BigDecimal nextQty = asset.getQuantity().subtract(quantity);
+      asset.setQuantity(nextQty);
+      if (nextQty.compareTo(BigDecimal.ZERO) <= 0) {
+        asset.setAveragePrice(BigDecimal.ZERO.setScale(MAX_DECIMAL_PLACES));
+      }
       wallet.setUsdBalance(wallet.getUsdBalance().add(total));
     }
     var trade = trades.save(new TradeTransaction(wallet.getUser(), wallet, symbol, side, quantity, price, total));
+    
+    // Log Equity Curve history
+    try {
+      BigDecimal cash = wallet.getUsdBalance();
+      BigDecimal cryptoValue = assets.findByWalletIdOrderBySymbol(wallet.getId()).stream()
+          .map(a -> {
+            BigDecimal currentPrice = market.price(a.getSymbol());
+            if (currentPrice == null) currentPrice = BigDecimal.ZERO;
+            return a.getQuantity().multiply(currentPrice);
+          })
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+      
+      equityHistory.save(new EquityHistory(wallet.getUser(), cash.add(cryptoValue)));
+    } catch (Exception ignored) {}
+    
     return from(trade);
   }
 

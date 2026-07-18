@@ -1,6 +1,7 @@
 package com.i2i.cryptflow.market;
 
 import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
+import com.i2i.cryptflow.trade.OrderService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -23,12 +24,16 @@ public class TickerEngine {
   private final PriceSnapshotWriter writer;
   private final ExternalPriceProvider supportedSymbols;
   private final Map<String, BigDecimal> configuredPrices;
+  private final OrderService orderService;
+  private final AlertService alertService;
 
   public TickerEngine(
       MarketPriceService market,
       PriceSnapshotRepository snapshots,
       PriceSnapshotWriter writer,
       ExternalPriceProvider supportedSymbols,
+      OrderService orderService,
+      AlertService alertService,
       @Value("${app.ticker.initial-prices.BTC}") BigDecimal btc,
       @Value("${app.ticker.initial-prices.ETH}") BigDecimal eth,
       @Value("${app.ticker.initial-prices.SOL}") BigDecimal sol
@@ -37,6 +42,8 @@ public class TickerEngine {
     this.snapshots = snapshots;
     this.writer = writer;
     this.supportedSymbols = supportedSymbols;
+    this.orderService = orderService;
+    this.alertService = alertService;
     this.configuredPrices = Map.of("BTC", btc, "ETH", eth, "SOL", sol);
   }
 
@@ -93,6 +100,10 @@ public class TickerEngine {
     }
     if (!prices.isEmpty()) {
       writer.write(prices, Instant.now());
+      try {
+        orderService.processPendingOrders(prices);
+        alertService.checkAlerts(prices);
+      } catch (Exception ignored) {}
     }
   }
 

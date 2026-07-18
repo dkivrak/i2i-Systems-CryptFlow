@@ -437,7 +437,8 @@ export default function DashboardPage({ onLogout }) {
           {[
             ['market', t('dashboard.tabMarket')],
             ['portfolio', t('dashboard.tabPortfolio')],
-            ['history', t('dashboard.tabTransactions')]
+            ['history', t('dashboard.tabTransactions')],
+            ['orders', t('dashboard.tabOrders', { defaultValue: 'Alarmlar & Limitler' })]
           ].map(([id, label]) => (
             <button
               key={id}
@@ -465,8 +466,9 @@ export default function DashboardPage({ onLogout }) {
             toggleFavorite={toggleFavorite}
           />
         )}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} />}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} currentLang={currentLang} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
+        {tab === 'orders' && <OrdersPanel market={market} t={t} dateLocale={dateLocale} />}
       </main>
 
       {modal && (
@@ -630,8 +632,56 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
   );
 }
 
-function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade }) {
+function EquityChart({ history }) {
+  if (!history || history.length < 2) return null;
+  const values = history.map(h => Number(h.value));
+  const minVal = Math.min(...values) * 0.99;
+  const maxVal = Math.max(...values) * 1.01;
+  const range = maxVal - minVal;
+
+  const width = 500;
+  const height = 140;
+  const padding = 15;
+
+  const points = history.map((h, index) => {
+    const x = padding + (index * (width - 2 * padding)) / (history.length - 1);
+    const y = height - padding - ((Number(h.value) - minVal) * (height - 2 * padding)) / (range || 1);
+    return { x, y };
+  });
+
+  const pathD = points.reduce((path, p, i) => 
+    i === 0 ? `M ${p.x} ${p.y}` : `${path} L ${p.x} ${p.y}`, ''
+  );
+
+  const fillD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+
+  return (
+    <div className="card rounded-2xl p-6 h-full flex flex-col justify-between">
+      <div className="flex items-center justify-between">
+        <p className="label">PORTFOLIO VALUE OVER TIME</p>
+        <span className="text-[10px] font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">LIVE CURVE</span>
+      </div>
+      <div className="relative mt-4 flex-1 h-[80px]">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#00d8f6" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#00d8f6" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+          <path d={fillD} fill="url(#chartGrad)" />
+          <path d={pathD} fill="none" stroke="#00d8f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade, currentLang }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [equityHistory, setEquityHistory] = useState([]);
+  const [aiAdvice, setAiAdvice] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const itemsPerPage = 5;
 
   const activeAssets = data?.assets?.filter(a => Number(a.quantity) > 0) || [];
@@ -649,71 +699,124 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
     setCurrentPage(1);
   }, [activeAssets.length]);
 
+  useEffect(() => {
+    api('/portfolio/equity-history')
+      .then(res => setEquityHistory(res || []))
+      .catch(err => console.error("Failed to load equity history", err));
+  }, [activeAssets.length]);
+
+  useEffect(() => {
+    setAiLoading(true);
+    api(`/portfolio/ai-advice?lang=${currentLang}`)
+      .then(res => {
+        setAiAdvice(res?.advice || '');
+      })
+      .catch(err => console.error("Failed to load AI advice", err))
+      .finally(() => setAiLoading(false));
+  }, [currentLang, activeAssets.length]);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
-      <div className="flex flex-col gap-6">
-        {/* Card 1: Available Cash */}
-        <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
-          <p className="label">{t('dashboard.availableCash')}</p>
-          <p className="mt-3 text-4xl font-black text-white">{money(data?.usdBalance)}</p>
-          <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
-        </div>
-        {/* Card 2: Total Crypto Value */}
-        <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
-          <p className="label">{t('dashboard.totalCoinValue')}</p>
-          <div className="mt-3 flex items-baseline gap-3">
-            <p className="text-4xl font-black text-white">{money(totalCoinsValue)}</p>
-            {cryptoChangePercent !== 0 && (
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                cryptoChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-              }`}>
-                {cryptoChangePercent >= 0 ? '+' : ''}{cryptoChangePercent.toFixed(2)}%
-              </span>
+    <div className="space-y-6">
+      {/* Upper Grid: Equity Curve & AI Advisor */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <EquityChart history={equityHistory} />
+        
+        {/* Card: AI Robo-Advisor */}
+        <div className="card rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden min-h-[160px]">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#00d8f6]/5 rounded-full filter blur-3xl pointer-events-none" />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">AI ROBO-ADVISOR</span>
+              <span className="text-slate-500 text-xs">✦ Gemini Insights</span>
+            </div>
+            {aiLoading ? (
+              <div className="mt-6 flex items-center gap-3 text-slate-400">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#00d8f6] border-t-transparent" />
+                <span className="text-xs">Analyzing portfolio rebalancing...</span>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs sm:text-sm text-slate-300 leading-relaxed italic">
+                "{aiAdvice || t('portfolio.aiAdviceDefault', { defaultValue: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!' })}"
+              </p>
             )}
           </div>
-          <p className="mt-2 text-sm text-slate-500">{t('dashboard.totalCoinValueDesc')}</p>
+          <div className="mt-4 border-t border-white/5 pt-2 text-[10px] text-slate-500">
+            Insights update every 10 minutes based on live market pricing and holdings.
+          </div>
         </div>
       </div>
-      <div className="card overflow-hidden rounded-2xl flex flex-col justify-between h-[440px]">
-        <div>
-          <div className="border-b border-white/10 p-6">
-            <p className="label">{t('dashboard.assetAllocation')}</p>
+
+      <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
+        <div className="flex flex-col gap-6">
+          {/* Card 1: Available Cash */}
+          <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
+            <p className="label">{t('dashboard.availableCash')}</p>
+            <p className="mt-3 text-4xl font-black text-white">{money(data?.usdBalance)}</p>
+            <p className="mt-2 text-sm text-slate-500">{t('dashboard.availableCashDesc')}</p>
           </div>
-          <div className="divide-y divide-white/5">
-            {displayedAssets.length > 0 ? (
-              displayedAssets.map(a => {
-                const livePrice = Number(market?.prices?.[a.symbol] || 0);
-                const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
-                return (
-                  <div key={a.symbol} className="grid grid-cols-[1fr_1.1fr_1.3fr_0.9fr] border-b border-white/5 px-3 sm:px-6 py-3.5 sm:py-4 last:border-0 items-center gap-1.5 sm:gap-2">
-                    <b className="text-xs sm:text-sm">{a.symbol}</b>
-                    <span className="text-right text-xs sm:text-sm text-slate-400 truncate">{coin(a.quantity)}</span>
-                    <div className="text-right flex flex-col sm:flex-row items-end sm:items-center justify-end gap-1 sm:gap-2.5 min-w-0">
-                      <span className="text-xs sm:text-sm font-bold text-white truncate">{money(liveValue)}</span>
-                      {changes?.[a.symbol] !== undefined && (
-                        <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded leading-none shrink-0 ${
-                          changes[a.symbol] >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                        }`}>
-                          {changes[a.symbol] >= 0 ? '+' : ''}{changes[a.symbol].toFixed(2)}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <button
-                        onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
-                        className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
-                      >
-                        {t('trade.sell')}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
-            )}
+          {/* Card 2: Total Crypto Value */}
+          <div className="card rounded-2xl p-6 flex-1 flex flex-col justify-center">
+            <p className="label">{t('dashboard.totalCoinValue')}</p>
+            <div className="mt-3 flex items-baseline gap-3">
+              <p className="text-4xl font-black text-white">{money(totalCoinsValue)}</p>
+              {cryptoChangePercent !== 0 && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  cryptoChangePercent >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                }`}>
+                  {cryptoChangePercent >= 0 ? '+' : ''}{cryptoChangePercent.toFixed(2)}%
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-slate-500">{t('dashboard.totalCoinValueDesc')}</p>
           </div>
         </div>
+        <div className="card overflow-hidden rounded-2xl flex flex-col justify-between h-[440px]">
+          <div>
+            <div className="border-b border-white/10 p-6">
+              <p className="label">{t('dashboard.assetAllocation')}</p>
+            </div>
+            <div className="divide-y divide-white/5">
+              {displayedAssets.length > 0 ? (
+                displayedAssets.map(a => {
+                  const livePrice = Number(market?.prices?.[a.symbol] || 0);
+                  const liveValue = livePrice > 0 ? Number(a.quantity) * livePrice : Number(a.valueUsd || 0);
+                  const avgCost = Number(a.averagePrice || 0);
+                  const pnlAmount = avgCost > 0 ? (livePrice - avgCost) * Number(a.quantity) : 0;
+                  const pnlPercent = avgCost > 0 ? ((livePrice - avgCost) / avgCost) * 100 : 0;
+
+                  return (
+                    <div key={a.symbol} className="grid grid-cols-[1fr_1.1fr_1.4fr_0.8fr] border-b border-white/5 px-3 sm:px-6 py-3.5 sm:py-4 last:border-0 items-center gap-1.5 sm:gap-2">
+                      <div>
+                        <b className="text-xs sm:text-sm">{a.symbol}</b>
+                        <p className="text-[10px] text-slate-500">Avg: {money(avgCost)}</p>
+                      </div>
+                      <span className="text-right text-xs sm:text-sm text-slate-400 truncate">{coin(a.quantity)}</span>
+                      <div className="text-right flex flex-col items-end min-w-0">
+                        <span className="text-xs sm:text-sm font-bold text-white truncate">{money(liveValue)}</span>
+                        {avgCost > 0 ? (
+                          <span className={`text-[10px] font-bold mt-0.5 ${pnlAmount >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {pnlAmount >= 0 ? '+' : ''}{money(pnlAmount)} ({pnlAmount >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 mt-0.5">—</span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <button
+                          onClick={() => onTrade({ symbol: a.symbol, side: 'SELL', isSellOnly: true })}
+                          className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold text-rose-400 hover:bg-rose-500/25 transition"
+                        >
+                          {t('trade.sell')}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="p-6 text-center text-sm text-slate-500">{t('dashboard.noAssets')}</p>
+              )}
+            </div>
+          </div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-white/10 p-5 bg-[#071320]/30 mt-auto">
@@ -744,6 +847,218 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
             </div>
           </div>
         )}
+      </div>
+    </div>
+  </div>
+  );
+}
+
+function OrdersPanel({ market, t, dateLocale }) {
+  const [activeOrders, setActiveOrders] = useState([]);
+  const [activeAlerts, setActiveAlerts] = useState([]);
+  const [triggeredAlerts, setTriggeredAlerts] = useState([]);
+
+  const [symbol, setSymbol] = useState('BTC');
+  const [targetPrice, setTargetPrice] = useState('');
+  const [condition, setCondition] = useState('ABOVE');
+  const [submittingAlert, setSubmittingAlert] = useState(false);
+  const [alertError, setAlertError] = useState('');
+
+  const refreshData = useCallback(async () => {
+    try {
+      const [ord, alr, trig] = await Promise.all([
+        api('/orders'),
+        api('/alerts'),
+        api('/alerts/triggered')
+      ]);
+      setActiveOrders(ord || []);
+      setActiveAlerts(alr || []);
+      setTriggeredAlerts(trig || []);
+    } catch (err) {
+      console.error("Failed to load orders/alerts", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshData();
+    const interval = setInterval(refreshData, 10000);
+    return () => clearInterval(interval);
+  }, [refreshData]);
+
+  const handleCreateAlert = async (e) => {
+    e.preventDefault();
+    if (!targetPrice || Number(targetPrice) <= 0) return;
+    setSubmittingAlert(true);
+    setAlertError('');
+    try {
+      await api('/alerts', {
+        method: 'POST',
+        body: JSON.stringify({ symbol, targetPrice, condition })
+      });
+      setTargetPrice('');
+      refreshData();
+    } catch (err) {
+      setAlertError(err.message);
+    } finally {
+      setSubmittingAlert(false);
+    }
+  };
+
+  const handleCancelOrder = async (id) => {
+    try {
+      await api(`/orders/${id}`, { method: 'DELETE' });
+      refreshData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteAlert = async (id) => {
+    try {
+      await api(`/alerts/${id}`, { method: 'DELETE' });
+      refreshData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="space-y-6">
+        <div className="card rounded-2xl p-6 relative overflow-hidden">
+          <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Set Price Alarm</h3>
+          <form onSubmit={handleCreateAlert} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Coin</label>
+                <select 
+                  value={symbol} 
+                  onChange={e => setSymbol(e.target.value)} 
+                  className="input py-2 text-xs bg-[#040a15]"
+                >
+                  {SUPPORTED_SYMBOLS.map(sym => (
+                    <option key={sym} value={sym} className="bg-[#040a15]">{sym}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Condition</label>
+                <select 
+                  value={condition} 
+                  onChange={e => setCondition(e.target.value)} 
+                  className="input py-2 text-xs bg-[#040a15]"
+                >
+                  <option value="ABOVE" className="bg-[#040a15]">Goes Above</option>
+                  <option value="BELOW" className="bg-[#040a15]">Goes Below</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Target Price (USD)</label>
+              <input
+                type="number"
+                step="any"
+                value={targetPrice}
+                onChange={e => setTargetPrice(e.target.value)}
+                placeholder="Target Price e.g. 65000"
+                className="input py-2 text-xs bg-[#040a15]"
+                required
+              />
+            </div>
+            {alertError && <p className="text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg">{alertError}</p>}
+            <button 
+              type="submit" 
+              disabled={submittingAlert}
+              className="btn btn-primary w-full py-2 text-xs"
+            >
+              {submittingAlert ? "Setting Alarm..." : "Set Price Alarm"}
+            </button>
+          </form>
+        </div>
+
+        <div className="card rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 p-5">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Active Alarms</h3>
+          </div>
+          <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto pr-1">
+            {activeAlerts.length > 0 ? (
+              activeAlerts.map(a => (
+                <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs">
+                  <div>
+                    <span className="font-bold text-white">{a.symbol}</span>
+                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? 'Goes Above' : 'Goes Below'}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-bold text-[#00d8f6]">{money(a.targetPrice)}</span>
+                    <button 
+                      onClick={() => handleDeleteAlert(a.id)}
+                      className="text-slate-500 hover:text-rose-400 transition"
+                      title="Delete Alert"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="p-5 text-center text-slate-500">No active alarms set.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="card rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 p-5">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Triggered Alarms History</h3>
+          </div>
+          <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto pr-1">
+            {triggeredAlerts.length > 0 ? (
+              triggeredAlerts.map(a => (
+                <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs bg-emerald-500/[0.02]">
+                  <div>
+                    <span className="font-bold text-emerald-400">✓ {a.symbol}</span>
+                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? 'went above' : 'went below'}</span>
+                  </div>
+                  <span className="font-bold text-slate-400">{money(a.targetPrice)}</span>
+                </div>
+              ))
+            ) : (
+              <p className="p-5 text-center text-slate-500">No triggered alarms.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="card rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 p-5">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Pending Orders</h3>
+          </div>
+          <div className="divide-y divide-white/5 max-h-[350px] overflow-y-auto pr-1">
+            {activeOrders.length > 0 ? (
+              activeOrders.map(o => (
+                <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
+                  <div>
+                    <span className={`font-bold px-1.5 py-0.5 rounded text-[9px] mr-2 ${
+                      o.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                    }`}>{o.type} {o.side}</span>
+                    <span className="font-bold text-white">{o.quantity} {o.symbol}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-bold text-[#00d8f6]">{money(o.targetPrice)}</span>
+                    <button 
+                      onClick={() => handleCancelOrder(o.id)}
+                      className="rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] text-slate-400 hover:text-white transition font-bold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="p-5 text-center text-slate-500">No pending limit orders.</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
