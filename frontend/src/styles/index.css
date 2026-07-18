@@ -27,16 +27,16 @@
 
 body.light {
   --bg-color: #f1f5f9;
-  --text-color: #0f172a;
+  --text-color: #1e293b;
   --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.08);
-  --card-hover-border: rgba(0, 216, 246, 0.4);
+  --card-border: #d8e2ef;
+  --card-hover-border: #a0aec0;
   --input-bg: #ffffff;
-  --input-border: rgba(0, 0, 0, 0.15);
+  --input-border: #cbd5e1;
   --input-text: #0f172a;
-  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(0, 216, 246, 0.03), transparent 45%),
-                 radial-gradient(circle at 90% 10%, rgba(16, 217, 142, 0.03), transparent 45%),
-                 #f1f5f9;
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(0, 216, 246, 0.05), transparent 45%),
+                 radial-gradient(circle at 90% 10%, rgba(16, 217, 142, 0.05), transparent 45%),
+                 #edf2f7;
 }
 
 body.light .text-white {
@@ -46,26 +46,54 @@ body.light .text-white {
 body.light .text-slate-300,
 body.light .text-slate-400,
 body.light .text-slate-500 {
-  color: #475569 !important;
+  color: #4a5568 !important;
 }
 
 body.light .bg-\[\#07111f\]\/90,
-body.light .bg-\[\#07111f\],
-body.light .bg-\[\#0a1929\],
-body.light .bg-\[\#081522\],
-body.light .bg-\[\#081522\]\/50,
-body.light .bg-\[\#0c1a2a\] {
+body.light .bg-\[\#07111f\] {
   background-color: #ffffff !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#0a1929\] {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#081522\] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#081522\]\/50 {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light .bg-\[\#0c1a2a\] {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
 }
 
 body.light .border-white\/10,
 body.light .border-white\/5 {
-  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-color: #cbd5e1 !important;
 }
 
 body.light .bg-\[\#0c1a2a\] .text-\[\#00d8f6\] {
   color: #0284c7 !important;
+}
+
+body.light svg path[stroke="#00d8f6"] {
+  stroke: #0284c7 !important;
+}
+
+body.light .text-gradient {
+  background: linear-gradient(135deg, #0284c7, #0f766e, #115e59) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
 }
 
 * {

@@ -964,11 +964,11 @@ function OrdersPanel({ market, t, dateLocale }) {
     <div className="grid gap-6 md:grid-cols-2">
       <div className="space-y-6">
         <div className="card rounded-2xl p-6 relative overflow-hidden">
-          <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Set Price Alarm</h3>
+          <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">{t('orders.setPriceAlarm', { defaultValue: 'Set Price Alarm' })}</h3>
           <form onSubmit={handleCreateAlert} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Coin</label>
+                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">{t('orders.coin', { defaultValue: 'Coin' })}</label>
                 <select 
                   value={symbol} 
                   onChange={e => setSymbol(e.target.value)} 
@@ -980,19 +980,19 @@ function OrdersPanel({ market, t, dateLocale }) {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Condition</label>
+                <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">{t('orders.condition', { defaultValue: 'Condition' })}</label>
                 <select 
                   value={condition} 
                   onChange={e => setCondition(e.target.value)} 
                   className="input py-2 text-xs bg-[#040a15]"
                 >
-                  <option value="ABOVE" className="bg-[#040a15]">Goes Above</option>
-                  <option value="BELOW" className="bg-[#040a15]">Goes Below</option>
+                  <option value="ABOVE" className="bg-[#040a15]">{t('orders.goesAbove', { defaultValue: 'Goes Above' })}</option>
+                  <option value="BELOW" className="bg-[#040a15]">{t('orders.goesBelow', { defaultValue: 'Goes Below' })}</option>
                 </select>
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Target Price (USD)</label>
+              <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1">{t('orders.targetPrice', { defaultValue: 'Target Price (USD)' })}</label>
               <input
                 type="number"
                 step="any"
@@ -1009,14 +1009,14 @@ function OrdersPanel({ market, t, dateLocale }) {
               disabled={submittingAlert}
               className="btn btn-primary w-full py-2 text-xs"
             >
-              {submittingAlert ? "Setting Alarm..." : "Set Price Alarm"}
+              {submittingAlert ? t('orders.settingAlarm', { defaultValue: 'Setting Alarm...' }) : t('orders.setPriceAlarmButton', { defaultValue: 'Set Price Alarm' })}
             </button>
           </form>
         </div>
 
         <div className="card rounded-2xl overflow-hidden">
           <div className="border-b border-white/10 p-5">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Active Alarms</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.activeAlarms', { defaultValue: 'Active Alarms' })}</h3>
           </div>
           <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto pr-1">
             {activeAlerts.length > 0 ? (
@@ -1024,7 +1024,7 @@ function OrdersPanel({ market, t, dateLocale }) {
                 <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs">
                   <div>
                     <span className="font-bold text-white">{a.symbol}</span>
-                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? 'Goes Above' : 'Goes Below'}</span>
+                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.goesAbove', { defaultValue: 'Goes Above' }) : t('orders.goesBelow', { defaultValue: 'Goes Below' })}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="font-bold text-[#00d8f6]">{money(a.targetPrice)}</span>
@@ -1039,14 +1039,14 @@ function OrdersPanel({ market, t, dateLocale }) {
                 </div>
               ))
             ) : (
-              <p className="p-5 text-center text-slate-500">No active alarms set.</p>
+              <p className="p-5 text-center text-slate-500">{t('orders.noActiveAlarms', { defaultValue: 'No active alarms set.' })}</p>
             )}
           </div>
         </div>
 
         <div className="card rounded-2xl overflow-hidden">
           <div className="border-b border-white/10 p-5">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Triggered Alarms History</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.triggeredAlarmsHistory', { defaultValue: 'Triggered Alarms History' })}</h3>
           </div>
           <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto pr-1">
             {triggeredAlerts.length > 0 ? (
@@ -1054,13 +1054,13 @@ function OrdersPanel({ market, t, dateLocale }) {
                 <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs bg-emerald-500/[0.02]">
                   <div>
                     <span className="font-bold text-emerald-400">✓ {a.symbol}</span>
-                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? 'went above' : 'went below'}</span>
+                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.wentAbove', { defaultValue: 'went above' }) : t('orders.wentBelow', { defaultValue: 'went below' })}</span>
                   </div>
                   <span className="font-bold text-slate-400">{money(a.targetPrice)}</span>
                 </div>
               ))
             ) : (
-              <p className="p-5 text-center text-slate-500">No triggered alarms.</p>
+              <p className="p-5 text-center text-slate-500">{t('orders.noTriggeredAlarms', { defaultValue: 'No triggered alarms.' })}</p>
             )}
           </div>
         </div>
@@ -1069,7 +1069,7 @@ function OrdersPanel({ market, t, dateLocale }) {
       <div className="space-y-6">
         <div className="card rounded-2xl overflow-hidden">
           <div className="border-b border-white/10 p-5">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Pending Orders</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.pendingOrders', { defaultValue: 'Pending Orders' })}</h3>
           </div>
           <div className="divide-y divide-white/5 max-h-[350px] overflow-y-auto pr-1">
             {activeOrders.length > 0 ? (
@@ -1087,13 +1087,13 @@ function OrdersPanel({ market, t, dateLocale }) {
                       onClick={() => handleCancelOrder(o.id)}
                       className="rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] text-slate-400 hover:text-white transition font-bold"
                     >
-                      Cancel
+                      {t('orders.cancelOrder', { defaultValue: 'Cancel' })}
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="p-5 text-center text-slate-500">No pending limit orders.</p>
+              <p className="p-5 text-center text-slate-500">{t('orders.noPendingOrders', { defaultValue: 'No pending limit orders.' })}</p>
             )}
           </div>
         </div>

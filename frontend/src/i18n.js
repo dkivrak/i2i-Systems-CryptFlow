@@ -153,6 +153,25 @@ const resources = {
         approveOrder: 'Yes, Approve',
         backToEdit: 'Go Back'
       },
+      orders: {
+        setPriceAlarm: 'Set Price Alarm',
+        coin: 'Coin',
+        condition: 'Condition',
+        goesAbove: 'Goes Above',
+        goesBelow: 'Goes Below',
+        targetPrice: 'Target Price (USD)',
+        settingAlarm: 'Setting Alarm...',
+        setPriceAlarmButton: 'Set Price Alarm',
+        activeAlarms: 'Active Alarms',
+        noActiveAlarms: 'No active alarms set.',
+        triggeredAlarmsHistory: 'Triggered Alarms History',
+        wentAbove: 'went above',
+        wentBelow: 'went below',
+        noTriggeredAlarms: 'No triggered alarms.',
+        pendingOrders: 'Pending Orders',
+        noPendingOrders: 'No pending limit orders.',
+        cancelOrder: 'Cancel'
+      },
 
       // --- Profile Modal ---
       profile: {
@@ -327,6 +346,25 @@ const resources = {
         confirmDesc: 'Lütfen aşağıdaki işlem detaylarını onaylayın.',
         approveOrder: 'Evet, Onayla',
         backToEdit: 'Geri Dön'
+      },
+      orders: {
+        setPriceAlarm: 'Fiyat Alarmı Kur',
+        coin: 'Coin',
+        condition: 'Koşul',
+        goesAbove: 'Üzerine Çıkınca',
+        goesBelow: 'Altına Düşünce',
+        targetPrice: 'Hedef Fiyat (USD)',
+        settingAlarm: 'Alarm Kuruluyor...',
+        setPriceAlarmButton: 'Fiyat Alarmı Kur',
+        activeAlarms: 'Aktif Alarmlar',
+        noActiveAlarms: 'Aktif alarm kurulmadı.',
+        triggeredAlarmsHistory: 'Tetiklenen Alarm Geçmişi',
+        wentAbove: 'üzerine çıktı',
+        wentBelow: 'altına düştü',
+        noTriggeredAlarms: 'Tetiklenen alarm yok.',
+        pendingOrders: 'Bekleyen Emirler',
+        noPendingOrders: 'Bekleyen limit emri yok.',
+        cancelOrder: 'İptal Et'
       },
 
       // --- Profile Modal ---
