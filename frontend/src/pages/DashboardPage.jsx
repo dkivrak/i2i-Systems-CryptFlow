@@ -819,7 +819,7 @@ function EquityChart({ history, currentTotalValue, totalCost, usdBalance }) {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              {tf === '1month' ? '1M' : tf.toUpperCase()}
+              {tf === '1month' ? '1M' : tf === '1y' ? '1Y' : tf}
             </button>
           ))}
         </div>
