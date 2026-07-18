@@ -116,6 +116,7 @@ const resources = {
 
       // --- Trade Modal ---
       trade: {
+        priceTrend: 'Price Trend',
         newOrder: 'NEW ORDER',
         symbolTransaction: '{{symbol}} Transaction',
         lockedPrice: 'Locked price',
@@ -311,6 +312,7 @@ const resources = {
 
       // --- Trade Modal ---
       trade: {
+        priceTrend: 'Fiyat Trendi',
         newOrder: 'YENİ EMİR',
         symbolTransaction: '{{symbol}} İşlemi',
         lockedPrice: 'Sabitlenmiş fiyat',

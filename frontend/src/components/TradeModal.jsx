@@ -14,6 +14,7 @@ function getLockablePrice(livePrice, priceStatus) {
 }
 
 function SparklineChart({ history }) {
+  const { t } = useTranslation();
   if (!history || history.length < 2) return null;
   const prices = history.map(h => Number(h.priceUsd));
   const minVal = Math.min(...prices) * 0.999;
@@ -37,7 +38,7 @@ function SparklineChart({ history }) {
   return (
     <div className="mt-4 rounded-xl bg-[#081522]/50 p-2.5 border border-white/5">
       <div className="flex justify-between text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-1.5">
-        <span>Fiyat Trendi (Son 40 Snapshot)</span>
+        <span>{t('trade.priceTrend', { defaultValue: 'Price Trend' })}</span>
         <span className="text-[#00d8f6]">Min: {money(minVal)} / Max: {money(maxVal)}</span>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[60px] overflow-visible">
