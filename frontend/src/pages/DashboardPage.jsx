@@ -29,7 +29,6 @@ export default function DashboardPage({ onLogout }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
   const [dailySummary, setDailySummary] = useState('');
   const [topTriggeredAlerts, setTopTriggeredAlerts] = useState([]);
   const [theme, setTheme] = useState(() => {
@@ -91,11 +90,18 @@ export default function DashboardPage({ onLogout }) {
 
   const currentLang = i18n.language;
 
+  const lastReadTimeVal = localStorage.getItem('cryptflow_daily_summary_read_time') || '0';
+  const cachedTimeVal = localStorage.getItem('cryptflow_daily_summary_time') || '0';
+  const hasUnreadSummary = dailySummary && Number(lastReadTimeVal) < Number(cachedTimeVal);
+  const unreadAlertsCount = topTriggeredAlerts.filter(a => {
+    return new Date(a.createdAt).getTime() > Number(lastReadTimeVal);
+  }).length;
+  const totalUnreadCount = (hasUnreadSummary ? 1 : 0) + unreadAlertsCount;
+
   useEffect(() => {
     const cachedSummary = localStorage.getItem('cryptflow_daily_summary');
     const cachedTime = localStorage.getItem('cryptflow_daily_summary_time');
     const cachedLang = localStorage.getItem('cryptflow_daily_summary_lang');
-    const lastReadTime = localStorage.getItem('cryptflow_daily_summary_read_time');
 
     const fetchDailySummary = async () => {
       try {
@@ -113,7 +119,6 @@ export default function DashboardPage({ onLogout }) {
           localStorage.setItem('cryptflow_daily_summary_time', Date.now().toString());
           localStorage.setItem('cryptflow_daily_summary_lang', currentLang);
           setDailySummary(cleanAnswer);
-          setHasUnreadNotification(true);
         }
       } catch (err) {
         console.error("Failed to fetch daily summary from AI", err);
@@ -125,9 +130,6 @@ export default function DashboardPage({ onLogout }) {
 
     if (cachedSummary && cachedTime && cachedLang === currentLang && (now - Number(cachedTime) < oneDayMs)) {
       setDailySummary(cachedSummary);
-      if (!lastReadTime || Number(lastReadTime) < Number(cachedTime)) {
-        setHasUnreadNotification(true);
-      }
     } else {
       fetchDailySummary();
     }
@@ -138,13 +140,6 @@ export default function DashboardPage({ onLogout }) {
       const res = await api('/alerts/triggered');
       const alerts = res || [];
       setTopTriggeredAlerts(alerts);
-      if (alerts.length > 0) {
-        const lastSeenId = localStorage.getItem('cryptflow_last_seen_alert_id');
-        const newestAlertId = alerts[0].id;
-        if (lastSeenId !== newestAlertId) {
-          setHasUnreadNotification(true);
-        }
-      }
     } catch (err) {
       console.error("Failed to load triggered alerts for header", err);
     }
@@ -169,7 +164,6 @@ export default function DashboardPage({ onLogout }) {
     setShowNotifications(prev => {
       const next = !prev;
       if (next) {
-        setHasUnreadNotification(false);
         localStorage.setItem('cryptflow_daily_summary_read_time', Date.now().toString());
         if (topTriggeredAlerts.length > 0) {
           localStorage.setItem('cryptflow_last_seen_alert_id', topTriggeredAlerts[0].id);
@@ -302,10 +296,9 @@ export default function DashboardPage({ onLogout }) {
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
-                {hasUnreadNotification && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                {totalUnreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white leading-none shadow-sm animate-pulse">
+                    {totalUnreadCount}
                   </span>
                 )}
               </button>
@@ -817,8 +810,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
           <div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">{t('dashboard.aiRoboAdvisor', { defaultValue: 'AI ROBO-ADVISOR' })}</span>
-                <span className="text-slate-500 text-xs">{t('dashboard.geminiInsights', { defaultValue: '✦ Gemini Insights' })}</span>
+                <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">{t('dashboard.aiAdvisor', { defaultValue: 'AI ADVISOR' })}</span>
               </div>
               <button
                 type="button"
