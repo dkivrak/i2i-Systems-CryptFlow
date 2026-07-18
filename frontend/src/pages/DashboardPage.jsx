@@ -31,6 +31,7 @@ export default function DashboardPage({ onLogout }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasUnreadNotification, setHasUnreadNotification] = useState(false);
   const [dailySummary, setDailySummary] = useState('');
+  const [topTriggeredAlerts, setTopTriggeredAlerts] = useState([]);
   const [theme, setTheme] = useState(() => {
     try {
       return localStorage.getItem('cryptflow_theme') || 'dark';
@@ -132,6 +133,29 @@ export default function DashboardPage({ onLogout }) {
     }
   }, [currentLang]);
 
+  const fetchTriggeredAlerts = useCallback(async () => {
+    try {
+      const res = await api('/alerts/triggered');
+      const alerts = res || [];
+      setTopTriggeredAlerts(alerts);
+      if (alerts.length > 0) {
+        const lastSeenId = localStorage.getItem('cryptflow_last_seen_alert_id');
+        const newestAlertId = alerts[0].id;
+        if (lastSeenId !== newestAlertId) {
+          setHasUnreadNotification(true);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load triggered alerts for header", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTriggeredAlerts();
+    const interval = setInterval(fetchTriggeredAlerts, 10000);
+    return () => clearInterval(interval);
+  }, [fetchTriggeredAlerts]);
+
   useEffect(() => {
     try {
       sessionStorage.setItem('cryptflow_active_tab', tab);
@@ -147,6 +171,9 @@ export default function DashboardPage({ onLogout }) {
       if (next) {
         setHasUnreadNotification(false);
         localStorage.setItem('cryptflow_daily_summary_read_time', Date.now().toString());
+        if (topTriggeredAlerts.length > 0) {
+          localStorage.setItem('cryptflow_last_seen_alert_id', topTriggeredAlerts[0].id);
+        }
       }
       return next;
     });
@@ -284,18 +311,18 @@ export default function DashboardPage({ onLogout }) {
               </button>
 
               {showNotifications && (
-                <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-80 z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+                <div className="fixed sm:absolute top-16 sm:top-8 left-4 right-4 sm:left-auto sm:right-0 sm:w-80 z-50 rounded-2xl border border-white/10 bg-[#0a1929] p-4 shadow-[0_20px_50px_rgba(0,0,0,.5)] max-h-[350px] overflow-y-auto pr-1">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
                     <h3 className="text-sm font-bold text-white">{t('dashboard.notifications')}</h3>
                     <button onClick={() => setShowNotifications(false)} className="text-xs text-slate-500 hover:text-white">{t('dashboard.close')}</button>
                   </div>
-                  {dailySummary ? (
-                    <div className="space-y-3">
+                  <div className="space-y-3">
+                    {dailySummary && (
                       <div className="rounded-xl bg-[#12243a] p-3 border border-white/5">
                         <div className="flex gap-2">
                           <span className="text-[#00d8f6] text-xs">✦</span>
                           <div>
-                            <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle')}</p>
+                            <p className="text-xs font-bold text-slate-200">{t('dashboard.dailySummaryTitle', { defaultValue: 'Daily Insights' })}</p>
                             <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{dailySummary}</p>
                           </div>
                         </div>
@@ -309,10 +336,30 @@ export default function DashboardPage({ onLogout }) {
                           {t('dashboard.goToPortfolio')}
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 py-4">{t('dashboard.noNotifications')}</p>
-                  )}
+                    )}
+                    {topTriggeredAlerts.map(a => (
+                      <div key={a.id} className="rounded-xl bg-emerald-500/10 p-3 border border-emerald-500/20 text-xs">
+                        <div className="flex items-start gap-2">
+                          <span className="text-emerald-400 font-bold">✓</span>
+                          <div className="flex-1">
+                            <p className="font-bold text-slate-200">
+                              {a.symbol} {a.condition === 'ABOVE'
+                                ? t('orders.wentAbove', { defaultValue: 'went above' })
+                                : t('orders.wentBelow', { defaultValue: 'went below' })
+                              }
+                            </p>
+                            <p className="mt-0.5 text-[#00d8f6] font-bold">{money(a.targetPrice)}</p>
+                            <p className="mt-1 text-[9px] text-slate-500">
+                              {new Date(a.createdAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {!dailySummary && topTriggeredAlerts.length === 0 && (
+                      <p className="text-center text-xs text-slate-500 py-4">{t('dashboard.noNotifications')}</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1075,27 +1122,6 @@ function OrdersPanel({ market, t, dateLocale }) {
             )}
           </div>
         </div>
-
-        <div className="card rounded-2xl overflow-hidden">
-          <div className="border-b border-white/10 p-5">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.triggeredAlarmsHistory', { defaultValue: 'Triggered Alarms History' })}</h3>
-          </div>
-          <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto pr-1">
-            {triggeredAlerts.length > 0 ? (
-              triggeredAlerts.map(a => (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs bg-emerald-500/[0.02]">
-                  <div>
-                    <span className="font-bold text-emerald-400">✓ {a.symbol}</span>
-                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.wentAbove', { defaultValue: 'went above' }) : t('orders.wentBelow', { defaultValue: 'went below' })}</span>
-                  </div>
-                  <span className="font-bold text-slate-400">{money(a.targetPrice)}</span>
-                </div>
-              ))
-            ) : (
-              <p className="p-5 text-center text-slate-500">{t('orders.noTriggeredAlarms', { defaultValue: 'No triggered alarms.' })}</p>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="space-y-6">
@@ -1126,6 +1152,27 @@ function OrdersPanel({ market, t, dateLocale }) {
               ))
             ) : (
               <p className="p-5 text-center text-slate-500">{t('orders.noPendingOrders', { defaultValue: 'No pending limit orders.' })}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="card rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 p-5">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.triggeredAlarmsHistory', { defaultValue: 'Triggered Alarms History' })}</h3>
+          </div>
+          <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto pr-1">
+            {triggeredAlerts.length > 0 ? (
+              triggeredAlerts.map(a => (
+                <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs bg-emerald-500/[0.02]">
+                  <div>
+                    <span className="font-bold text-emerald-400">✓ {a.symbol}</span>
+                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.wentAbove', { defaultValue: 'went above' }) : t('orders.wentBelow', { defaultValue: 'went below' })}</span>
+                  </div>
+                  <span className="font-bold text-slate-400">{money(a.targetPrice)}</span>
+                </div>
+              ))
+            ) : (
+              <p className="p-5 text-center text-slate-500">{t('orders.noTriggeredAlarms', { defaultValue: 'No triggered alarms.' })}</p>
             )}
           </div>
         </div>
