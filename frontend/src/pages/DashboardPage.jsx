@@ -1142,6 +1142,10 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
 }
 
 function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
+  const sortedSymbols = useMemo(() => {
+    return [...symbols].sort((a, b) => a.localeCompare(b));
+  }, [symbols]);
+
   const [activeOrders, setActiveOrders] = useState([]);
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [triggeredAlerts, setTriggeredAlerts] = useState([]);
@@ -1242,7 +1246,7 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
                   onChange={e => setSymbol(e.target.value)} 
                   className="input py-2 text-xs bg-[#040a15]"
                 >
-                  {symbols.map(sym => (
+                  {sortedSymbols.map(sym => (
                     <option key={sym} value={sym} className="bg-[#040a15]">{sym}</option>
                   ))}
                 </select>
