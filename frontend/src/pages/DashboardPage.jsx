@@ -467,9 +467,12 @@ export default function DashboardPage({ onLogout }) {
                             }}
                             className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition"
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-white">{s}</span>
-                              <span className="text-[10px] text-slate-400">/ USD</span>
+                            <div className="flex items-center gap-2.5">
+                              <CoinLogo symbol={s} className="h-7 w-7" />
+                              <div className="text-left flex flex-col justify-center">
+                                <span className="font-bold text-xs text-white leading-none block">{s}</span>
+                                <span className="text-[9px] text-slate-500 leading-none mt-0.5">/ USD</span>
+                              </div>
                             </div>
                             <div className="text-right">
                               <span className="text-xs font-bold text-white block">{price ? money(price) : '...'}</span>
@@ -1683,7 +1686,7 @@ function AssetAllocationChart({ portfolio, market, t }) {
   );
 }
 
-function CoinLogo({ symbol }) {
+function CoinLogo({ symbol, className }) {
   const [sourceIndex, setSourceIndex] = useState(0);
 
   const getSymbolGradient = (sym) => {
@@ -1701,12 +1704,14 @@ function CoinLogo({ symbol }) {
     `https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`
   ];
 
+  const sizeClass = className || "h-11 w-11";
+
   if (sourceIndex >= sources.length) {
     const displaySymbol = symbol.length > 4 ? symbol.slice(0, 3) : symbol;
     return (
       <span
         style={{ background: getSymbolGradient(symbol) }}
-        className="grid h-11 w-11 place-items-center rounded-full font-black text-[10px] text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)] tracking-tight uppercase"
+        className={`grid place-items-center rounded-full font-black text-[10px] text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)] tracking-tight uppercase ${sizeClass}`}
       >
         {displaySymbol}
       </span>
@@ -1718,7 +1723,7 @@ function CoinLogo({ symbol }) {
       src={sources[sourceIndex]}
       alt={symbol}
       onError={() => setSourceIndex(prev => prev + 1)}
-      className="h-11 w-11 rounded-full object-contain"
+      className={`${sizeClass} rounded-full object-contain`}
       loading="lazy"
     />
   );

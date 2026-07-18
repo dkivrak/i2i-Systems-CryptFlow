@@ -150,6 +150,28 @@ body.light .hover\:bg-white\/5:hover {
   background-color: rgba(0, 0, 0, 0.05) !important;
 }
 
+body.light .bg-rose-950\/40 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+body.light .hover\:bg-rose-900\/60:hover {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+body.light .bg-rose-500\/20 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+body.light .hover\:bg-rose-500\/30:hover {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+body.light .text-rose-400 {
+  color: #dc2626 !important;
+}
+
 body.light .text-gradient {
   background: linear-gradient(135deg, #0284c7, #0f766e, #115e59) !important;
   -webkit-background-clip: text !important;
