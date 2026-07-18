@@ -975,6 +975,24 @@ function OrdersPanel({ market, t, dateLocale }) {
   const [activeAlerts, setActiveAlerts] = useState([]);
   const [triggeredAlerts, setTriggeredAlerts] = useState([]);
 
+  const [activeAlertsPage, setActiveAlertsPage] = useState(0);
+  const [activeOrdersPage, setActiveOrdersPage] = useState(0);
+  const [triggeredAlertsPage, setTriggeredAlertsPage] = useState(0);
+
+  const pageSize = 3;
+
+  const totalAlertsPages = Math.ceil(activeAlerts.length / pageSize);
+  const clampedAlertsPage = totalAlertsPages > 0 ? Math.max(0, Math.min(activeAlertsPage, totalAlertsPages - 1)) : 0;
+  const displayedAlerts = activeAlerts.slice(clampedAlertsPage * pageSize, (clampedAlertsPage + 1) * pageSize);
+
+  const totalOrdersPages = Math.ceil(activeOrders.length / pageSize);
+  const clampedOrdersPage = totalOrdersPages > 0 ? Math.max(0, Math.min(activeOrdersPage, totalOrdersPages - 1)) : 0;
+  const displayedOrders = activeOrders.slice(clampedOrdersPage * pageSize, (clampedOrdersPage + 1) * pageSize);
+
+  const totalTriggeredPages = Math.ceil(triggeredAlerts.length / pageSize);
+  const clampedTriggeredPage = totalTriggeredPages > 0 ? Math.max(0, Math.min(triggeredAlertsPage, totalTriggeredPages - 1)) : 0;
+  const displayedTriggered = triggeredAlerts.slice(clampedTriggeredPage * pageSize, (clampedTriggeredPage + 1) * pageSize);
+
   const [symbol, setSymbol] = useState('BTC');
   const [targetPrice, setTargetPrice] = useState('');
   const [condition, setCondition] = useState('ABOVE');
@@ -1094,13 +1112,36 @@ function OrdersPanel({ market, t, dateLocale }) {
         </div>
 
         <div className="card rounded-2xl overflow-hidden">
-          <div className="border-b border-white/10 p-5">
+          <div className="border-b border-white/10 p-5 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.activeAlarms', { defaultValue: 'Active Alarms' })}</h3>
+            {totalAlertsPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={clampedAlertsPage === 0}
+                  onClick={() => setActiveAlertsPage(p => p - 1)}
+                  className="rounded-md bg-white/5 border border-white/10 p-1 text-[10px] text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+                >
+                  ←
+                </button>
+                <span className="text-[10px] text-slate-500 font-bold px-1 select-none">
+                  {clampedAlertsPage + 1} / {totalAlertsPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={clampedAlertsPage >= totalAlertsPages - 1}
+                  onClick={() => setActiveAlertsPage(p => p + 1)}
+                  className="rounded-md bg-white/5 border border-white/10 p-1 text-[10px] text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
-          <div className="divide-y divide-white/5 max-h-[200px] overflow-y-auto pr-1">
-            {activeAlerts.length > 0 ? (
-              activeAlerts.map(a => (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs">
+          <div className="divide-y divide-white/5">
+            {displayedAlerts.length > 0 ? (
+              displayedAlerts.map(a => (
+                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
                   <div>
                     <span className="font-bold text-white">{a.symbol}</span>
                     <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.goesAbove', { defaultValue: 'Goes Above' }) : t('orders.goesBelow', { defaultValue: 'Goes Below' })}</span>
@@ -1126,12 +1167,35 @@ function OrdersPanel({ market, t, dateLocale }) {
 
       <div className="space-y-6">
         <div className="card rounded-2xl overflow-hidden">
-          <div className="border-b border-white/10 p-5">
+          <div className="border-b border-white/10 p-5 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.pendingOrders', { defaultValue: 'Pending Orders' })}</h3>
+            {totalOrdersPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={clampedOrdersPage === 0}
+                  onClick={() => setActiveOrdersPage(p => p - 1)}
+                  className="rounded-md bg-white/5 border border-white/10 p-1 text-[10px] text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+                >
+                  ←
+                </button>
+                <span className="text-[10px] text-slate-500 font-bold px-1 select-none">
+                  {clampedOrdersPage + 1} / {totalOrdersPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={clampedOrdersPage >= totalOrdersPages - 1}
+                  onClick={() => setActiveOrdersPage(p => p + 1)}
+                  className="rounded-md bg-white/5 border border-white/10 p-1 text-[10px] text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
-          <div className="divide-y divide-white/5 max-h-[350px] overflow-y-auto pr-1">
-            {activeOrders.length > 0 ? (
-              activeOrders.map(o => (
+          <div className="divide-y divide-white/5">
+            {displayedOrders.length > 0 ? (
+              displayedOrders.map(o => (
                 <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
                   <div>
                     <span className={`font-bold px-1.5 py-0.5 rounded text-[9px] mr-2 ${
@@ -1157,13 +1221,36 @@ function OrdersPanel({ market, t, dateLocale }) {
         </div>
 
         <div className="card rounded-2xl overflow-hidden">
-          <div className="border-b border-white/10 p-5">
+          <div className="border-b border-white/10 p-5 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.triggeredAlarmsHistory', { defaultValue: 'Triggered Alarms History' })}</h3>
+            {totalTriggeredPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={clampedTriggeredPage === 0}
+                  onClick={() => setTriggeredAlertsPage(p => p - 1)}
+                  className="rounded-md bg-white/5 border border-white/10 p-1 text-[10px] text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+                >
+                  ←
+                </button>
+                <span className="text-[10px] text-slate-500 font-bold px-1 select-none">
+                  {clampedTriggeredPage + 1} / {totalTriggeredPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={clampedTriggeredPage >= totalTriggeredPages - 1}
+                  onClick={() => setTriggeredAlertsPage(p => p + 1)}
+                  className="rounded-md bg-white/5 border border-white/10 p-1 text-[10px] text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition font-bold"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
-          <div className="divide-y divide-white/5 max-h-[150px] overflow-y-auto pr-1">
-            {triggeredAlerts.length > 0 ? (
-              triggeredAlerts.map(a => (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3 text-xs bg-emerald-500/[0.02]">
+          <div className="divide-y divide-white/5">
+            {displayedTriggered.length > 0 ? (
+              displayedTriggered.map(a => (
+                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 text-xs bg-emerald-500/[0.02]">
                   <div>
                     <span className="font-bold text-emerald-400">✓ {a.symbol}</span>
                     <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.wentAbove', { defaultValue: 'went above' }) : t('orders.wentBelow', { defaultValue: 'went below' })}</span>
