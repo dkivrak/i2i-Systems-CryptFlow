@@ -744,14 +744,18 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
       .catch(err => console.error("Failed to load equity history", err));
   }, [activeAssets.length]);
 
-  useEffect(() => {
+  const loadAiAdvice = (force = false) => {
     setAiLoading(true);
-    api(`/portfolio/ai-advice?lang=${currentLang}`)
+    api(`/portfolio/ai-advice?lang=${currentLang}&force=${force}`)
       .then(res => {
         setAiAdvice(res?.advice || '');
       })
       .catch(err => console.error("Failed to load AI advice", err))
       .finally(() => setAiLoading(false));
+  };
+
+  useEffect(() => {
+    loadAiAdvice(false);
   }, [currentLang, activeAssets.length]);
 
   return (
@@ -764,9 +768,36 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
         <div className="card rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden min-h-[160px]">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#00d8f6]/5 rounded-full filter blur-3xl pointer-events-none" />
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">{t('dashboard.aiRoboAdvisor', { defaultValue: 'AI ROBO-ADVISOR' })}</span>
-              <span className="text-slate-500 text-xs">{t('dashboard.geminiInsights', { defaultValue: '✦ Gemini Insights' })}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black tracking-widest text-[#00d8f6] bg-[#00d8f6]/10 px-2 py-0.5 rounded-md">{t('dashboard.aiRoboAdvisor', { defaultValue: 'AI ROBO-ADVISOR' })}</span>
+                <span className="text-slate-500 text-xs">{t('dashboard.geminiInsights', { defaultValue: '✦ Gemini Insights' })}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => loadAiAdvice(true)}
+                disabled={aiLoading}
+                className="text-slate-400 hover:text-[#00d8f6] transition-colors p-1.5 rounded-full hover:bg-white/5 disabled:opacity-50 flex items-center justify-center"
+                title={t('dashboard.refreshAdvice', { defaultValue: 'Refresh Advice' })}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={aiLoading ? 'animate-spin' : ''}
+                >
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                  <path d="M16 16h5v5" />
+                </svg>
+              </button>
             </div>
             {aiLoading ? (
               <div className="mt-6 flex items-center gap-3 text-slate-400">

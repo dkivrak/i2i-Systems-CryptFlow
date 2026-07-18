@@ -97,7 +97,8 @@ const resources = {
         geminiInsights: '✦ Gemini Insights',
         analyzingPortfolio: 'Analyzing portfolio rebalancing...',
         insightsUpdateNote: 'Insights update every 10 minutes based on live market pricing and holdings.',
-        aiAdviceDefault: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!'
+        aiAdviceDefault: 'Your portfolio is currently in cash. Acquire crypto assets to receive personalized rebalancing insights!',
+        refreshAdvice: 'Refresh Advice'
       },
 
       // --- Chat Widget ---
@@ -300,7 +301,8 @@ const resources = {
         geminiInsights: '✦ Gemini Analizi',
         analyzingPortfolio: 'Portföy dengesi analiz ediliyor...',
         insightsUpdateNote: 'Analizler, anlık piyasa fiyatlarına ve varlıklarınıza göre her 10 dakikada bir güncellenir.',
-        aiAdviceDefault: 'Portföyünüz şu anda sadece nakitten oluşuyor. Kişiselleştirilmiş analizler almak için kripto varlık edinin!'
+        aiAdviceDefault: 'Portföyünüz şu anda sadece nakitten oluşuyor. Kişiselleştirilmiş analizler almak için kripto varlık edinin!',
+        refreshAdvice: 'Analizi Yenile'
       },
 
       // --- Chat Widget ---

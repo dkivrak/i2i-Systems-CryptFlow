@@ -58,10 +58,14 @@ public class PortfolioController {
   }
 
   @GetMapping("/ai-advice")
-  Map<String, String> getAiAdvice(@AuthenticationPrincipal UUID userId, @RequestParam(defaultValue = "en") String lang) {
+  Map<String, String> getAiAdvice(
+      @AuthenticationPrincipal UUID userId,
+      @RequestParam(defaultValue = "en") String lang,
+      @RequestParam(defaultValue = "false") boolean force
+  ) {
     long now = System.currentTimeMillis();
     var cached = adviceCache.get(userId);
-    if (cached != null && cached.lang().equalsIgnoreCase(lang) && (now - cached.timestamp() < CACHE_TTL_MS)) {
+    if (!force && cached != null && cached.lang().equalsIgnoreCase(lang) && (now - cached.timestamp() < CACHE_TTL_MS)) {
       return Map.of("advice", cached.advice());
     }
 
