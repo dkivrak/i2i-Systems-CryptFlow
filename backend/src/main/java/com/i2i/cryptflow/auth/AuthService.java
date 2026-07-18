@@ -2,7 +2,7 @@ package com.i2i.cryptflow.auth;
 
 import com.i2i.cryptflow.portfolio.*;
 import com.i2i.cryptflow.shared.error.ApiException;
-import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import com.i2i.cryptflow.user.*;
 import com.i2i.cryptflow.wallet.*;
 import java.math.*;
@@ -24,7 +24,7 @@ public class AuthService {
   private final PortfolioAssetRepository assets;
   private final PasswordEncoder passwords;
   private final SessionService sessions;
-  private final SupportedSymbolsService supportedSymbols;
+  private final ExternalPriceProvider supportedSymbols;
   private final SecureRandom random = new SecureRandom();
 
   public AuthService(UserRepository users,
@@ -32,7 +32,7 @@ public class AuthService {
                      PortfolioAssetRepository assets,
                      PasswordEncoder passwordEncoder,
                      SessionService sessions,
-                     SupportedSymbolsService supportedSymbols) {
+                     ExternalPriceProvider supportedSymbols) {
     this.users = users;
     this.wallets = wallets;
     this.assets = assets;

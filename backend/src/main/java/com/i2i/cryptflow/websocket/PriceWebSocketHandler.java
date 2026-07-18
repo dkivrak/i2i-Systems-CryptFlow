@@ -3,7 +3,7 @@ package com.i2i.cryptflow.websocket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.i2i.cryptflow.market.MarketPriceService;
 
-import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -46,7 +46,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   private final MarketPriceService marketPriceService;
   private final BinanceConnector binanceConnector;
   private final ScheduledExecutorService reconnectExecutor;
-  private final SupportedSymbolsService supportedSymbols;
+  private final ExternalPriceProvider supportedSymbols;
   private final long connectTimeoutMs;
   private final long initialRetryDelayMs;
   private final long maxRetryDelayMs;
@@ -70,7 +70,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   public PriceWebSocketHandler(
       ObjectMapper objectMapper,
       MarketPriceService marketPriceService,
-      SupportedSymbolsService supportedSymbols
+      ExternalPriceProvider supportedSymbols
   ) {
     this(
         objectMapper,
@@ -88,7 +88,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   PriceWebSocketHandler(
       ObjectMapper objectMapper,
       MarketPriceService marketPriceService,
-      SupportedSymbolsService supportedSymbols,
+      ExternalPriceProvider supportedSymbols,
       BinanceConnector binanceConnector,
       ScheduledExecutorService reconnectExecutor,
       long connectTimeoutMs,
@@ -111,7 +111,7 @@ public class PriceWebSocketHandler extends TextWebSocketHandler {
   private PriceWebSocketHandler(
       ObjectMapper objectMapper,
       MarketPriceService marketPriceService,
-      SupportedSymbolsService supportedSymbols,
+      ExternalPriceProvider supportedSymbols,
       BinanceConnector binanceConnector,
       ScheduledExecutorService reconnectExecutor,
       long connectTimeoutMs,

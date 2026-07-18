@@ -4,7 +4,7 @@ import com.i2i.cryptflow.market.MarketPriceService;
 import com.i2i.cryptflow.portfolio.PortfolioAsset;
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
 import com.i2i.cryptflow.shared.error.ApiException;
-import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import com.i2i.cryptflow.wallet.WalletRepository;
 import java.math.*;
 import java.time.Instant;
@@ -23,9 +23,9 @@ public class TradeService {
   private final PortfolioAssetRepository assets;
   private final TradeTransactionRepository trades;
   private final MarketPriceService market;
-  private final SupportedSymbolsService supportedSymbols;
+  private final ExternalPriceProvider supportedSymbols;
 
-  public TradeService(WalletRepository wallets, PortfolioAssetRepository assets, TradeTransactionRepository trades, MarketPriceService market, SupportedSymbolsService supportedSymbols) {
+  public TradeService(WalletRepository wallets, PortfolioAssetRepository assets, TradeTransactionRepository trades, MarketPriceService market, ExternalPriceProvider supportedSymbols) {
     this.wallets = wallets;
     this.assets = assets;
     this.trades = trades;

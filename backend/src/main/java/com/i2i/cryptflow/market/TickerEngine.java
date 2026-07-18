@@ -1,6 +1,6 @@
 package com.i2i.cryptflow.market;
 
-import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -20,14 +20,14 @@ public class TickerEngine {
   private final MarketPriceService market;
   private final PriceSnapshotRepository snapshots;
   private final PriceSnapshotWriter writer;
-  private final SupportedSymbolsService supportedSymbols;
+  private final ExternalPriceProvider supportedSymbols;
   private final Map<String, BigDecimal> configuredPrices;
 
   public TickerEngine(
       MarketPriceService market,
       PriceSnapshotRepository snapshots,
       PriceSnapshotWriter writer,
-      SupportedSymbolsService supportedSymbols,
+      ExternalPriceProvider supportedSymbols,
       @Value("${app.ticker.initial-prices.BTC}") BigDecimal btc,
       @Value("${app.ticker.initial-prices.ETH}") BigDecimal eth,
       @Value("${app.ticker.initial-prices.SOL}") BigDecimal sol

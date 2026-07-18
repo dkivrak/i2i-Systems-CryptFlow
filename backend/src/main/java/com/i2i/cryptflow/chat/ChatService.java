@@ -2,7 +2,7 @@ package com.i2i.cryptflow.chat;
 
 import com.i2i.cryptflow.market.*;
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
-import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import com.i2i.cryptflow.trade.TradeTransactionRepository;
 import com.i2i.cryptflow.user.User;
 import com.i2i.cryptflow.user.UserRepository;
@@ -29,7 +29,7 @@ public class ChatService {
   private final TradeTransactionRepository trades;
   private final PriceSnapshotRepository snapshots;
   private final MarketPriceService market;
-  private final SupportedSymbolsService supportedSymbols;
+  private final ExternalPriceProvider supportedSymbols;
 
   public ChatService(
       GeminiClient gemini,
@@ -39,7 +39,7 @@ public class ChatService {
       TradeTransactionRepository trades,
       PriceSnapshotRepository snapshots,
       MarketPriceService market,
-      SupportedSymbolsService supportedSymbols
+      ExternalPriceProvider supportedSymbols
   ) {
     this.gemini = gemini;
     this.users = users;

@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
  * and provides the list of supported symbols and their initial prices.
  */
 @Service
-public class SupportedSymbolsService {
+public class SupportedSymbolsService implements ExternalPriceProvider {
   private static final Logger log = LoggerFactory.getLogger(SupportedSymbolsService.class);
   private static final String BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/price";
   private static final String USDT_SUFFIX = "USDT";

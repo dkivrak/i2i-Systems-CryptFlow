@@ -1,7 +1,7 @@
 package com.i2i.cryptflow.market;
 
 import com.i2i.cryptflow.shared.error.ApiException;
-import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
@@ -15,9 +15,9 @@ public class MarketPriceService {
   private static final String UPDATED = "updatedAt";
 
   private final StringRedisTemplate redis;
-  private final SupportedSymbolsService supportedSymbols;
+  private final ExternalPriceProvider supportedSymbols;
 
-  public MarketPriceService(StringRedisTemplate redis, SupportedSymbolsService supportedSymbols) {
+  public MarketPriceService(StringRedisTemplate redis, ExternalPriceProvider supportedSymbols) {
     this.redis = redis;
     this.supportedSymbols = supportedSymbols;
   }
