@@ -1,193 +1,201 @@
-# CryptFlow 🚀
-### Paper Trading & AI Market Assistant
+# CryptFlow
+## Decoupled Paper-Trading Simulator & AI Market Analytics System
 
-> [!NOTE]
-> This project has been developed as part of the **i2i Academy Internship Program** as a paper-trading web application allowing users to simulate real-time cryptocurrency trading using a virtual USD balance, complete with generative AI market insights.
-
----
-
-## 🏛️ Tech Stack
-
-The application is built on a high-performance, modular, and scalable architecture:
-
-- **Frontend:** React, Vite, JavaScript, Tailwind CSS, `i18next` (Internationalization), `react-markdown`
-- **Backend:** Java 21, Spring Boot 3 (Modular Monolith)
-- **Database & Migration:** PostgreSQL + Flyway (Database schema migration manager)
-- **Caching & Session Storage:** Redis (Stores user sessions and active live prices)
-- **Live Stream:** Native WebSockets (`/ws` endpoint using custom Spring `TextWebSocketHandler`)
-- **Generative AI:** Google Gemini API (Powering the conversational chatbot assistant and portfolio summary insights)
+This project was developed as a core deliverable for the i2i Academy Internship Program. CryptFlow is a high-performance, decoupled paper-trading web application that allows users to simulate cryptocurrency trading using virtual USD balances, track portfolio performance metrics, and receive context-aware market analytics powered by Large Language Models (LLMs).
 
 ---
 
-## 📊 Architecture & Data Flow
+## Technical Stack
 
-The following diagram illustrates how live market data flows from Binance down to the PostgreSQL database and React frontend, alongside the transaction and chat execution paths:
+The platform is designed as a decoupled system featuring a React Single Page Application (SPA) frontend and a Spring Boot modular monolith backend:
+
+*   **Frontend SPA:** React (Vite-powered compiler), JavaScript, Tailwind CSS styling, `i18next` translation framework, Lightweight Charts for price history visualization, and `react-markdown` for LLM rendering.
+*   **Backend Core:** Java 21, Spring Boot 3.4.1 (Web, WebFlux, WebSocket, Data JPA).
+*   **Persistent Storage:** PostgreSQL 16 database utilizing Flyway migrations for schema management.
+*   **High-Performance Cache:** Redis (Spring Data Redis) for session/token validation and high-frequency price updates.
+*   **Real-time Streaming:** Native Spring WebSockets with custom session decorators to broadcast live price tickers.
+*   **Generative AI Pipeline:** Google Gemini API integrated directly via WebFlux `WebClient` for contextual prompt orchestration.
+
+---
+
+## System Architecture & Data Flow
+
+The following architecture diagram details the ingestion, caching, transactional execution, and AI inference paths within the system:
 
 ```mermaid
 graph TD
-    %% Client Layer
-    subgraph Client ["Client (Browser / Frontend)"]
-        ViteApp["React Vite App"]
+    %% Client Tier
+    subgraph Client ["Client Interface (SPA)"]
+        ViteApp["React SPA Client"]
     end
 
-    %% Server Layer
-    subgraph Server ["Server (VPS / Localhost)"]
-        Backend["Spring Boot Backend"]
-        AuthService["Auth Service"]
-        WSServer["Native WebSocket Server"]
-        GeminiClient["Gemini AI Client"]
-        TradeEngine["Trade Execution Engine"]
-        Redis["Redis Hash: market:prices"]
-        DB[(PostgreSQL Database)]
+    %% API Gateway & Application Server
+    subgraph AppServer ["Spring Boot Modular Monolith"]
+        WSHandler["PriceWebSocketHandler (TextWebSocketHandler)"]
+        ChatService["ChatService (AI Orchestrator)"]
+        TradeService["TradeService (Execution Engine)"]
+        TickerEngine["TickerEngine (Background Scheduler)"]
+        NewsService["NewsService (Live News Processor)"]
     end
 
-    %% External Services
-    Binance["Binance WebSocket Stream"]
+    %% Cache & Persistence Tier
+    subgraph Storage ["Cache & Persistence Tier"]
+        RedisCache["Redis (Live Prices & Session Cache)"]
+        PostgreDB[("PostgreSQL DB (ACID Source of Truth)")]
+    end
 
-    %% Data Flow Connections
-    Binance -- "Live Ticker Updates" --> Backend
-    Backend -- "1. Update Prices / Session State" --> Redis
-    AuthService -- "1. Update Prices / Session State" --> Redis
-    
-    ViteApp -- "1. Initial State REST API" --> Backend
-    ViteApp -- "2. Subscribe ws://" --> WSServer
-    Backend -- "2. Broadcast" --> WSServer
-    
-    ViteApp -- "3. Risk Query /chat" --> GeminiClient
-    Backend -- "3. Periodic Snapshots" --> DB
-    
-    ViteApp -- "4. Execute Trade /trades" --> TradeEngine
-    TradeEngine -- "Transaction Locks" --> DB
+    %% External APIs
+    subgraph External ["External Services"]
+        Binance["Binance WebSocket (!miniTicker@arr)"]
+        GeminiAPI["Google Gemini LLM API"]
+        RSSFeeds["Global News RSS Feeds"]
+    end
+
+    %% Connections
+    Binance -- "High-frequency Tickers" --> WSHandler
+    WSHandler -- "1. Cache Latest Prices" --> RedisCache
+    WSHandler -- "2. Broadcast via WS (/ws)" --> ViteApp
+
+    ViteApp -- "REST API: Auth & Account" --> AppServer
+    AppServer -- "Validate Sessions" --> RedisCache
+    AppServer -- "Persist Trades & Wallets" --> PostgreDB
+
+    ViteApp -- "Query Chatbot (/api/chat)" --> ChatService
+    ChatService -- "Context Enrichment" --> PostgreDB
+    ChatService -- "Live Price Fetch" --> RedisCache
+    ChatService -- "Execute Inference" --> GeminiAPI
+
+    ViteApp -- "Execute Order (/api/trades)" --> TradeService
+    TradeService -- "Pessimistic Write Locks (Row-level)" --> PostgreDB
+
+    TickerEngine -- "Ticking every 15s" --> TradeService
+    TickerEngine -- "Process Limit/Stop-Loss" --> RedisCache
+
+    ViteApp -- "Fetch News (/api/news)" --> NewsService
+    NewsService -- "Request Translation" --> GeminiAPI
+    RSSFeeds -- "Pull Articles (EN/TR)" --> NewsService
 ```
 
 ### Flow Breakdown
 
-1. **Initial State (REST API):**
-   Upon startup, the **React Vite App** fetches the initial market prices and user authentication states from the **Spring Boot Backend** REST endpoints. Simultaneously, the backend pulls active market listings and prices directly from the Binance REST API.
-
-2. **Real-time Price Capture & Caching:**
-   The backend establishes a persistent connection to the external **Binance WebSocket Stream** to receive real-time ticker updates. The **Auth Service** and backend components continuously update the token price states and user sessions inside the **Redis Cache** (using the `market:prices` hash) to minimize database load.
-
-3. **WebSocket Broadcasting:**
-   The backend processes and broadcasts incoming price updates through the **Native WebSocket Server** (`/ws` endpoint). The frontend client opens a raw WebSocket connection to receive these real-time price updates immediately.
-
-4. **Gemini AI Market Assistant:**
-   User queries regarding portfolio health, historical performance, and contextual market analysis are sent to the **Gemini AI Client** via the `/api/chat/query` endpoint to get instant, context-aware financial advice.
-
-5. **Historical Snapshots:**
-   The backend periodically writes historical price snapshots from Redis into the **PostgreSQL Database** for charting and audit logs.
-
-6. **Pessimistic Trade Execution:**
-   When a user clicks "Execute Order", a trade request is sent to the **Trade Execution Engine**. The engine locks the user's wallet and asset rows in the **PostgreSQL Database** using a **pessimistic write lock** (`PESSIMISTIC_WRITE`) within a single transactional block to prevent race conditions or double-spending.
+1.  **High-Frequency Data Ingestion:**
+    The backend establishes a persistent WebSocket connection to the external **Binance WebSocket Stream** (subscribing to `!miniTicker@arr`). The custom `PriceWebSocketHandler` parses incoming JSON payloads, updates the **Redis Cache** in-memory price hash (`market:prices`), and broadcasts the prices to all active **React SPA** clients using a non-blocking WebSocket stream (`/ws`).
+2.  **Concurrency-Safe Session Caching:**
+    Upon user authentication, session metadata and tokens are generated and cached in **Redis** with a 24-hour Time-to-Live (TTL). Subsequent client requests validate tokens against Redis, preventing database roundtrips for authentication.
+3.  **Low-Latency Price Queries:**
+    All public endpoints querying the latest asset prices fetch directly from the **Redis Cache** instead of executing SQL queries against the relational database, ensuring sub-millisecond response times.
+4.  **ACID-Compliant Transactional Trading:**
+    Order execution demands strict transactional boundaries. When executing buys or sells, the **Trade Execution Engine** obtains row-level database locks (`PESSIMISTIC_WRITE`) on the user's `Wallet` and `PortfolioAsset` rows within PostgreSQL. This prevents double-spending and ensures consistent updates.
+5.  **LLM Prompt Orchestration:**
+    The chatbot gathers user portfolio state and recent transaction history from **PostgreSQL**, queries the latest prices from **Redis**, and injects these metrics into a structured prompt layout. This enriched payload is transmitted to the **Google Gemini API**, returning context-aware summaries.
 
 ---
 
-## ✨ Key Features
+## Architectural & Functional Details
 
-### 1. Dynamic Binance Integration & Live Streams 📈
-* **Dynamic Asset Listing:** At startup, the application fetches all active `USDT` trading pairs directly from the Binance REST API (`https://api.binance.com/api/v3/ticker/price`) to populate the system dynamically.
-* **WebSocket Price Stream:** Subscribes to the global Binance `!miniTicker@arr` WebSocket channel. Received price ticks are cached in Redis and streamed instantly to all connected clients via native WebSockets.
-* **Stream Health Monitoring (Stale Connection Detection):** If the WebSocket connection is interrupted, the system automatically detects the stale state and schedules reconnects every 5 seconds.
+### 1. Robust WebSocket Connection Management
+*   **Decorated Session Handling:** Spring WebSocket sessions are wrapped in a thread-safe `ConcurrentWebSocketSessionDecorator`. The system implements backpressure controls by specifying a 10-second send time limit and a 512KB buffer limit. If a slow client exceeds these limits, messages are dropped to preserve application thread integrity.
+*   **Stale Connection Detection:** The backend monitors stream activity. If no data arrives from Binance within a specified window, the connection is considered stale and automatic reconnects are triggered.
 
-### 2. 30-Second Price Locking (Price Lock) ⏳
-* The moment a user opens the buy/sell trade modal, the active coin price is **locked for 30 seconds**.
-* A flashing countdown timer is displayed inside the modal indicating the remaining time.
-* Once the 30-second timer hits zero, the locked price expires, the **"Execute Order" button is automatically disabled**, and the user is notified that the price lock is no longer valid.
+### 2. Concurrency Control and Pessimistic Locking
+*   **Race Condition Mitigation:** Multiple API requests or background order processing operations executing trade tasks for the same user wallet are serialized at the database level.
+*   **Implementation:** Using Hibernate's row locking mechanism:
+    ```java
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT w FROM Wallet w WHERE w.userId = :userId")
+    Optional<Wallet> findByUserIdForUpdate(@Param("userId") UUID userId);
+    ```
+    This lock delays concurrent transactions until the current trade commits, guaranteeing ACID properties under high load.
 
-### 3. Favorites System & Status Dropdown 💖
-* Market cards feature heart toggle buttons in their top-right corner to add/remove coins from favorites. The state is persisted in `localStorage`.
-* A Heart button next to the profile icon in the header opens a dedicated **Favorites Dropdown Window** displaying live prices and percent changes for all favorited assets.
-* Clicking any favorited asset inside the dropdown immediately opens its trading modal.
-* The header heart icon utilizes a breathing/pulsing red dot badge instead of a raw counter for a premium aesthetic.
+### 3. Background Ticker Engine & Automated Order Matcher
+*   **Ticker Engine Loop:** A scheduler annotated with `@Scheduled` runs every 15 seconds. It generates realistic simulated price fluctuations when local simulation mode is active, writes price history snapshots to PostgreSQL, and invokes the alert/order processors.
+*   **Automated Limit & Stop-Loss Execution:** The background scheduler pulls all pending (`PENDING`) limit and stop-loss orders from PostgreSQL. It compares target execution thresholds against the latest price data cached in Redis:
+    *   *Limit Buy:* Executes when the current price is less than or equal to the target price.
+    *   *Limit Sell:* Executes when the current price is greater than or equal to the target price.
+    *   *Stop-Loss Sell:* Executes when the current price drops below or meets the target price.
+    Upon triggering, it initiates transactional trade completion and updates the order status to `EXECUTED`.
 
-### 4. Gemini AI Chatbot Widget 🤖
-* A chat widget in the bottom-right corner integrates the Google Gemini API.
-* The assistant automatically analyzes the user's active portfolio allocation, trade transaction history, and current market feeds to provide contextual investment summaries and answers.
-* Supports rich Markdown formatting for all chat replies.
+### 4. Dynamic News Translation with Resilient Fallback
+*   **Dynamic Language Detection:** The `/api/news` REST endpoint evaluates the user's active interface language (`?lang=tr` or `?lang=en`).
+*   **Contextual Translation Pipeline:** Instead of displaying different news feeds for different languages, the system maintains consistent coverage by translating primary English feeds (CoinDesk & Cointelegraph) into Turkish on-the-fly using the **Google Gemini LLM**.
+*   **Caching Strategy:** To optimize latency and mitigate LLM rate limits, the translated articles are cached in-memory with a 5-minute TTL.
+*   **Resilient Fallback Routing:** If the Gemini API is unreachable, times out, or encounters rate limits, the `NewsService` catches the exception and falls back to fetching and parsing Turkish RSS feeds (KoinFinans and Investing.com TR) directly.
 
-### 5. Multilingual Support (TR / EN i18n) 🌐
-* The application supports bilingual (Turkish and English) localization powered by `react-i18next`.
-* Language configuration can be swapped instantly within the Account Settings (Profile Modal) page.
-
-### 6. Premium Dark Glassmorphic Design 🎨
-* Curated dark color scheme matching the custom brand logo.
-* Premium micro-animations, glassmorphic card overlays, and clean layouts.
-* Login page features an infinite vertical scrolling marquee ticker showing 9 randomly selected coins from the live stream.
+### 5. LLM Prompt Orchestration & Contextual Guardrails
+*   **Data Injection:** Prompt orchestration extracts user balances, portfolio holdings, current market valuations, and recent transaction history, injecting them into a strict system instruction wrapper.
+*   **Contextual Safety Guardrails:** The system prompt instructs the model to answer queries strictly regarding the provided account details and crypto markets. If the LLM generates a response without a disclaimer, the backend intercepts the text and appends: *"Educational purposes only — not financial advice."*
+*   **Error Isolation:** All LLM integrations run inside protected try-catch contexts. If the external API fails, the backend immediately responds with a structured `503 Service Unavailable` JSON payload rather than blocking thread resources.
 
 ---
 
-## 🗄️ Database Migrations (Flyway)
+## Database Migrations (Flyway)
 
-The database schema is managed incrementally through Flyway migrations:
+The PostgreSQL schema is evolved incrementally via Flyway migration scripts located in `src/main/resources/db/migration`:
 
-| Version | Migration Purpose | Description |
+| Version | Migration Script | Purpose |
 |---|---|---|
-| `V1__initial_schema.sql` | Base Schema | Creates User, Wallet, Portfolio Assets, and Trade Transactions tables. |
-| `V2__add_new_symbols.sql` | Symbol CHECK Constraints | Adds database-level constraints specifying supported asset symbols. |
-| `V3__remove_symbol_constraints.sql` | Dynamic Symbols Support | Removes the hardcoded CHECK constraints to allow dynamic Binance symbols. |
-| `V4__widen_symbol_column.sql` | Symbol Column Expansion | Widens the `symbol` columns to `VARCHAR(50)` to accommodate long Binance trade symbols. |
-| `V5__increase_price_precision.sql` | Decimal Precision Expansion | Expands column definitions (`price_usd` and `unit_price_usd`) to `NUMERIC(28,8)` to prevent rounding cheap assets (e.g. SHIB) to 0. |
+| `V1` | `V1__initial_schema.sql` | Establishes `users`, `wallets`, `portfolio_assets`, and `trade_transactions` tables. |
+| `V2` | `V2__add_new_symbols.sql` | Adds CHECK constraints defining the initial supported symbols. |
+| `V3` | `V3__remove_symbol_constraints.sql` | Drops static constraints to support dynamic Binance symbols. |
+| `V4` | `V4__widen_symbol_column.sql` | Expands symbol VARCHAR width to support longer Binance trade pairs. |
+| `V5` | `V5__increase_price_precision.sql` | Alters price columns to `NUMERIC(28,8)` to support high-precision low-value assets. |
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Variables
 
-Copy the root `.env.example` file to `.env` and fill in your values.
+Configuration parameters are externalized and managed using environment variables. Fill in these keys inside your local `.env` file:
 
-| Variable Name | Default Value | Description |
+| Variable | Default Value | Description |
 |---|---|---|
 | `POSTGRES_DB` | `cryptflow` | PostgreSQL database name |
-| `POSTGRES_USER` | `cryptflow` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | `change-me` | PostgreSQL user password |
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://postgres:5432/cryptflow` | JDBC datasource URL |
+| `POSTGRES_USER` | `cryptflow` | PostgreSQL database username |
+| `POSTGRES_PASSWORD` | `change-me` | PostgreSQL database password |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://postgres:5432/cryptflow` | JDBC target connection URL |
 | `SPRING_DATA_REDIS_HOST` | `redis` | Redis server hostname |
 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis server port |
-| `SESSION_TTL_HOURS` | `24` | User session TTL in Redis (Hours) |
-| `FRONTEND_ORIGINS` | `http://localhost:5173` | Allowed CORS origins (comma-separated) |
-| `GEMINI_API_KEY` | *(Empty)* | Google Gemini API key |
-| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | Active Gemini API model |
-| `TICKER_INTERVAL_MS` | `15000` | Price update loop interval (Milliseconds) |
+| `SESSION_TTL_HOURS` | `24` | Token validation session TTL in Redis |
+| `FRONTEND_ORIGINS` | `http://localhost:5173` | Allowed CORS origins for backend WebMvc configuration |
+| `GEMINI_API_KEY` | *(Required)* | Google Gemini API credential token |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | Model identifier for prompt processing |
+| `TICKER_INTERVAL_MS` | `15000` | Ticker engine frequency limit |
 
 ---
 
-## 🛠️ Installation and Setup
+## Local Development and Deployment
 
-### Full Containerized Setup (Recommended)
-Ensure Docker/Docker Compose and Node.js (v20+) are installed.
+### Full Dockerized Setup (Recommended)
+Confirm that Docker Engine and Docker Compose are installed on your target machine.
 
-1. Create your `.env` configuration file:
-   ```bash
-   cp .env.example .env
-   ```
+1.  Clone the repository and copy the environment template:
+    ```bash
+    cp .env.example .env
+    ```
+2.  Configure your `GEMINI_API_KEY` in the newly created `.env` file.
+3.  Build and run the system container group:
+    ```bash
+    docker compose up -d --build
+    ```
+    *This command compiles the Spring Boot backend, starts PostgreSQL and Redis, applies Flyway migrations, and launches the API.*
+    * **Backend Endpoint:** `http://localhost:8080`
+    * **Interactive API Documentation:** `http://localhost:8080/swagger-ui.html`
 
-2. Spin up the backend, database, and caching servers:
-   ```bash
-   docker compose up -d --build
-   ```
-   *This starts Postgres, Redis, and the Spring Boot API, automatically applying all database schema migrations via Flyway.*
-   * **Backend API Base URL:** `http://localhost:8080`
-   * **Swagger UI Documentation:** `http://localhost:8080/swagger-ui.html`
+4.  Install dependencies and start the React client:
+    ```bash
+    cd frontend
+    npm install
+    npm run dev -- --port 5173
+    ```
+    * **Frontend URL:** `http://localhost:5173`
 
-3. Start the React frontend application:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev -- --port 5173
-   ```
-   * **Frontend Application URL:** `http://localhost:5173`
-
----
-
-## 🧪 Testing and Production Build
-
-* **Run Backend Unit & Integration Tests:**
-  ```bash
-  cd backend
-  ./mvnw clean test
-  ```
-
-* **Build Frontend for Production:**
-  ```bash
-  cd frontend
-  npm run build
-  ```
+### Running Tests
+*   **Backend Tests (Unit & Integration):**
+    ```bash
+    cd backend
+    ./mvnw clean test
+    ```
+*   **Frontend Tests:**
+    ```bash
+    cd frontend
+    npm run test
+    ```
