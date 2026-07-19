@@ -703,12 +703,11 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                   <CoinLogo symbol={s} index={globalIndex} />
                 </div>
                 <p className="mt-6 label">{s} / USD</p>
-                <div className="mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <p className="text-2xl sm:text-3xl font-black">{money(market?.prices?.[s])}</p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <MiniSparkline symbol={s} currentPrice={market?.prices?.[s]} changeVal={changes?.[s]} />
+                <div className="mt-2 flex items-center justify-between gap-4">
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-2xl sm:text-3xl font-black text-white truncate">{money(market?.prices?.[s])}</p>
                     {changes?.[s] !== undefined && (
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1.5 w-fit shrink-0 ${
                         changes[s] > 0 ? 'bg-emerald-500/10 text-emerald-400' :
                         changes[s] < 0 ? 'bg-rose-500/10 text-rose-400' :
                         'bg-slate-500/10 text-slate-400'
@@ -716,6 +715,9 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                         {changes[s] > 0 ? '+' : ''}{changes[s].toFixed(2)}%
                       </span>
                     )}
+                  </div>
+                  <div className="shrink-0">
+                    <MiniSparkline symbol={s} currentPrice={market?.prices?.[s]} changeVal={changes?.[s]} />
                   </div>
                 </div>
                 <div className="mt-5 border-t border-white/10 pt-4 text-sm text-slate-400">
