@@ -1,5 +1,7 @@
 package com.i2i.cryptflow.market;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.i2i.cryptflow.chat.GeminiClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ public class NewsService {
     private static final Logger log = LoggerFactory.getLogger(NewsService.class);
 
     private final WebClient webClient;
+    private final GeminiClient geminiClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     
     private List<NewsItem> cachedEnNews = null;
     private Instant cacheExpiryEn = Instant.MIN;
@@ -34,8 +38,9 @@ public class NewsService {
 
     private final Object cacheLock = new Object();
 
-    public NewsService(WebClient.Builder webClientBuilder) {
+    public NewsService(WebClient.Builder webClientBuilder, GeminiClient geminiClient) {
         this.webClient = webClientBuilder.build();
+        this.geminiClient = geminiClient;
     }
 
     public List<NewsItem> getNews(String lang) {
@@ -48,29 +53,130 @@ public class NewsService {
                 return cached;
             }
 
-            List<NewsItem> freshNews = fetchAndParseAllFeeds(isTr);
-            if (!freshNews.isEmpty() || cached == null) {
-                if (isTr) {
-                    cachedTrNews = freshNews;
-                    cacheExpiryTr = Instant.now().plus(Duration.ofMinutes(5));
-                } else {
-                    cachedEnNews = freshNews;
+            // Always fetch/ensure English news is loaded first because Turkish news is translated from it
+            List<NewsItem> englishNews;
+            if (cachedEnNews != null && Instant.now().isBefore(cacheExpiryEn)) {
+                englishNews = cachedEnNews;
+            } else {
+                englishNews = fetchAndParseAllFeeds(false);
+                if (!englishNews.isEmpty()) {
+                    cachedEnNews = englishNews;
                     cacheExpiryEn = Instant.now().plus(Duration.ofMinutes(5));
                 }
-                return freshNews;
             }
-            return cached;
+
+            if (isTr) {
+                List<NewsItem> freshTrNews = translateToTurkish(englishNews);
+                if (!freshTrNews.isEmpty()) {
+                    cachedTrNews = freshTrNews;
+                    cacheExpiryTr = Instant.now().plus(Duration.ofMinutes(5));
+                }
+                return freshTrNews;
+            } else {
+                return englishNews;
+            }
         }
+    }
+
+    private List<NewsItem> translateToTurkish(List<NewsItem> englishNews) {
+        if (englishNews == null || englishNews.isEmpty()) {
+            return fetchFallbackTrNews();
+        }
+
+        try {
+            // Take top 10 articles to translate to avoid token limit and keep it fast
+            List<NewsItem> articlesToTranslate = englishNews.stream().limit(10).toList();
+            
+            // Build simple JSON structure for prompt
+            List<Map<String, String>> translationInput = new ArrayList<>();
+            for (NewsItem item : articlesToTranslate) {
+                translationInput.add(Map.of(
+                    "id", item.id(),
+                    "title", item.title(),
+                    "body", item.body()
+                ));
+            }
+
+            String jsonInput = objectMapper.writeValueAsString(translationInput);
+
+            String prompt = "Translate the titles and bodies of these news articles into Turkish.\n" +
+                    "Respond ONLY with a valid JSON array of objects. Do not include markdown code block syntax (like ```json).\n" +
+                    "Each object must have:\n" +
+                    "- \"id\": string (the exact same ID)\n" +
+                    "- \"title\": string (the translated title)\n" +
+                    "- \"body\": string (the translated body text)\n\n" +
+                    "Input articles:\n" +
+                    jsonInput;
+
+            String response = geminiClient.generate(prompt);
+            // Clean markdown block wrappers if Gemini outputs them
+            if (response.contains("```")) {
+                response = response.replaceAll("```json", "")
+                                   .replaceAll("```", "")
+                                   .trim();
+            }
+
+            // Parse response
+            List<Map<String, String>> translatedList = objectMapper.readValue(
+                response, 
+                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>() {}
+            );
+
+            // Create a lookup map for translated items
+            Map<String, Map<String, String>> translatedMap = new HashMap<>();
+            for (Map<String, String> tItem : translatedList) {
+                translatedMap.put(tItem.get("id"), tItem);
+            }
+
+            List<NewsItem> translatedNews = new ArrayList<>();
+            for (NewsItem item : articlesToTranslate) {
+                Map<String, String> translation = translatedMap.get(item.id());
+                if (translation != null) {
+                    translatedNews.add(new NewsItem(
+                        item.id(),
+                        translation.get("title"),
+                        translation.get("body"),
+                        item.source(),
+                        item.url(),
+                        item.imageurl(),
+                        item.publishedOn()
+                    ));
+                } else {
+                    // Fallback to original English item if one specific translation failed
+                    translatedNews.add(item);
+                }
+            }
+
+            // If the translation list is empty, fallback to TR feeds
+            if (translatedNews.isEmpty()) {
+                return fetchFallbackTrNews();
+            }
+
+            return translatedNews;
+
+        } catch (Exception e) {
+            log.error("Failed to translate news with Gemini, falling back to Turkish RSS feeds", e);
+            return fetchFallbackTrNews();
+        }
+    }
+
+    private List<NewsItem> fetchFallbackTrNews() {
+        List<NewsItem> fallbackNews = new ArrayList<>();
+        try {
+            fallbackNews.addAll(fetchAndParseFeed("https://www.koinfinans.com/feed/", "KoinFinans"));
+            fallbackNews.addAll(fetchAndParseFeed("https://tr.investing.com/rss/302.rss", "Investing.com"));
+            fallbackNews.sort(Comparator.comparingLong(NewsItem::publishedOn).reversed());
+        } catch (Exception e) {
+            log.error("Failed to fetch fallback Turkish RSS feeds", e);
+        }
+        return fallbackNews;
     }
 
     private List<NewsItem> fetchAndParseAllFeeds(boolean isTr) {
         List<NewsItem> aggregatedNews = new ArrayList<>();
 
         if (isTr) {
-            // KoinFinans
-            aggregatedNews.addAll(fetchAndParseFeed("https://www.koinfinans.com/feed/", "KoinFinans"));
-            // Investing.com TR
-            aggregatedNews.addAll(fetchAndParseFeed("https://tr.investing.com/rss/302.rss", "Investing.com"));
+            aggregatedNews.addAll(fetchFallbackTrNews());
         } else {
             // Cointelegraph
             aggregatedNews.addAll(fetchAndParseFeed("https://cointelegraph.com/rss", "Cointelegraph"));
