@@ -26,6 +26,79 @@ The price and equity charts are repository-native SVG components. The project do
 
 The backend is a feature-oriented modular monolith. Authentication, chat, market (including alerts), portfolio, trade (including orders), user, wallet, WebSocket, and shared infrastructure code live in focused packages under `backend/src/main/java/com/i2i/cryptflow`. These packages are compiled and deployed as one Spring Boot application; they are not independently deployed services.
 
+```mermaid
+flowchart LR
+    subgraph Client["Client"]
+        SPA["React SPA<br/>REST client + 15 s WebSocket watchdog"]
+    end
+
+    subgraph Backend["Spring Boot modular monolith"]
+        REST["REST controllers<br/>/api"]
+        Auth["Auth service +<br/>session filter"]
+        Market["Account, market +<br/>portfolio services"]
+        Trading["Trade + order + alert services"]
+        Symbols["SupportedSymbolsService<br/>discovery + fallback symbols"]
+        Socket["PriceWebSocketHandler<br/>native /ws"]
+        Ticker["TickerEngine<br/>scheduled snapshots, orders and alerts"]
+        News["NewsService<br/>5-minute in-memory cache"]
+        AI["Chat + portfolio advice"]
+        Schema["Flyway V1-V8<br/>Hibernate schema validation"]
+    end
+
+    subgraph Data["Application state"]
+        Redis[("Redis<br/>opaque sessions + live prices")]
+        Postgres[("PostgreSQL<br/>durable source of truth")]
+    end
+
+    subgraph External["External services"]
+        BinanceREST["Binance REST API"]
+        BinanceWS["Binance native WebSocket<br/>!miniTicker@arr"]
+        RSS["English RSS feeds<br/>Turkish fallback RSS feeds"]
+        Gemini["Google Gemini API<br/>optional"]
+    end
+
+    SPA -->|"REST; Bearer on protected routes"| REST
+    SPA -->|"connect /ws"| Socket
+    Socket -->|"RFC 6455 JSON price batches"| SPA
+    SPA -->|"24 h ticker for daily change"| BinanceREST
+
+    REST --> Auth
+    REST --> Market
+    REST --> Trading
+    REST --> News
+    REST --> AI
+
+    Auth <-->|"opaque token TTL"| Redis
+    Auth <-->|"register writes; login reads"| Postgres
+    Market -->|"read current prices"| Redis
+    Market -->|"wallet, asset + history reads"| Postgres
+    Trading -->|"read execution prices"| Redis
+    Trading -->|"transactions; wallet + existing asset locks"| Postgres
+
+    BinanceREST -->|"startup symbols + prices"| Symbols
+    Symbols -->|"symbols + startup prices"| Ticker
+    Symbols -.->|"symbol validation"| Trading
+    Symbols -.->|"supported-pair filter"| Socket
+    BinanceWS -->|"mini-ticker array"| Socket
+    Socket -->|"update market:prices"| Redis
+
+    Ticker <-->|"bootstrap seed + scheduled reads"| Redis
+    Ticker -->|"process pending orders + alerts"| Trading
+    Ticker -->|"price snapshots"| Postgres
+    Postgres -->|"snapshot recovery"| Ticker
+    Schema -->|"migrate + validate at startup"| Postgres
+
+    News -->|"English fetch; Turkish fallback"| RSS
+    News -.->|"translate when configured"| Gemini
+    AI -.->|"bounded request when configured"| Gemini
+    AI -->|"account + trade context"| Postgres
+    AI -->|"market context"| Redis
+```
+
+Solid arrows show runtime data paths. Dashed arrows show policy or optional integration paths.
+
+### Flow breakdown
+
 1. At startup, the backend asks Binance REST for current USDT pairs and prices. If Binance is unavailable, it uses a ten-symbol fallback list; missing Redis prices are seeded from a fetched startup price when available or `1.00` otherwise. Stored snapshots and the three configured initial prices are secondary recovery inputs if the ticker must rebuild state after a current-price read fails.
 2. `GET /api/market/prices` reads the latest price hash from Redis. The browser also requests Binance's 24-hour ticker directly to calculate daily-open comparisons.
 3. When at least one browser connects to `/ws`, the backend opens Binance's `!miniTicker@arr` native WebSocket stream, filters supported USDT pairs, updates Redis, and broadcasts JSON price batches. It reconnects after an upstream connection failure or close. The upstream socket is released after the last browser disconnects.
