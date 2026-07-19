@@ -2,7 +2,7 @@
 
 CryptFlow is a paper-trading application for learning cryptocurrency portfolio management without moving real funds. It combines a React single-page application with a Spring Boot API, PostgreSQL persistence, Redis-backed prices and opaque login sessions, native JSON WebSocket market updates, scheduled orders and alerts, RSS news, and optional Google Gemini analysis.
 
-- **Live application:** **TODO — supply the deployed application URL manually.** No live deployment URL is stored in this repository.
+- **Live application:** https://cryptflow.online/
 - **GitHub repository:** [dkivrak/i2i-Systems--CryptFlow](https://github.com/dkivrak/i2i-Systems--CryptFlow)
 
 ## Technology stack
