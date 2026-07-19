@@ -2,10 +2,12 @@ package com.i2i.cryptflow.trade;
 
 import com.i2i.cryptflow.portfolio.PortfolioAssetRepository;
 import com.i2i.cryptflow.shared.error.ApiException;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import com.i2i.cryptflow.user.UserRepository;
 import com.i2i.cryptflow.wallet.WalletRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -19,36 +21,55 @@ public class OrderService {
   private final PortfolioAssetRepository assets;
   private final UserRepository users;
   private final TradeService tradeService;
+  private final ExternalPriceProvider supportedSymbols;
 
   public OrderService(
       LimitOrderRepository orders,
       WalletRepository wallets,
       PortfolioAssetRepository assets,
       UserRepository users,
-      TradeService tradeService
+      TradeService tradeService,
+      ExternalPriceProvider supportedSymbols
   ) {
     this.orders = orders;
     this.wallets = wallets;
     this.assets = assets;
     this.users = users;
     this.tradeService = tradeService;
+    this.supportedSymbols = supportedSymbols;
   }
 
   @Transactional
   public LimitOrder place(UUID userId, String symbol, String side, String type, BigDecimal targetPrice, BigDecimal quantity) {
+    String normalizedSymbol = normalize(symbol);
+    String normalizedSide = normalize(side);
+    String normalizedType = normalize(type);
+
+    if (!supportedSymbols.isSupported(normalizedSymbol)) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", "Symbol '" + normalizedSymbol + "' is not supported.");
+    }
+    if (!normalizedSide.equals("BUY") && !normalizedSide.equals("SELL")) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_SIDE", "Order side must be BUY or SELL.");
+    }
+    if (!normalizedType.equals("LIMIT") && !normalizedType.equals("STOP_LOSS")) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_TYPE", "Order type must be LIMIT or STOP_LOSS.");
+    }
+    if (normalizedType.equals("STOP_LOSS") && !normalizedSide.equals("SELL")) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_COMBINATION", "STOP_LOSS orders must use side SELL.");
+    }
+    if (quantity == null || targetPrice == null || quantity.signum() <= 0 || targetPrice.signum() <= 0) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "Quantity and target price must be positive.");
+    }
+
     var user = users.findById(userId).orElseThrow();
     var wallet = wallets.findByUserId(userId).orElseThrow();
     var total = targetPrice.multiply(quantity);
-
-    if (quantity.signum() <= 0 || targetPrice.signum() <= 0) {
-      throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "Quantity and target price must be positive.");
-    }
 
     List<LimitOrder> pending = orders.findByUserIdOrderByCreatedAtDesc(userId).stream()
         .filter(o -> o.getStatus().equals("PENDING"))
         .toList();
 
-    if (side.equalsIgnoreCase("BUY")) {
+    if (normalizedSide.equals("BUY")) {
       BigDecimal lockedUsd = pending.stream()
           .filter(o -> o.getSide().equalsIgnoreCase("BUY"))
           .map(o -> o.getTargetPrice().multiply(o.getQuantity()))
@@ -59,10 +80,10 @@ public class OrderService {
       }
     } else {
       BigDecimal lockedCoin = pending.stream()
-          .filter(o -> o.getSide().equalsIgnoreCase("SELL") && o.getSymbol().equalsIgnoreCase(symbol))
+          .filter(o -> o.getSide().equals("SELL") && o.getSymbol().equals(normalizedSymbol))
           .map(LimitOrder::getQuantity)
           .reduce(BigDecimal.ZERO, BigDecimal::add);
-      var asset = assets.findByWalletIdAndSymbol(wallet.getId(), symbol)
+      var asset = assets.findByWalletIdAndSymbol(wallet.getId(), normalizedSymbol)
           .orElseThrow(() -> new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_ASSET", "You do not own this asset."));
       BigDecimal availableCoin = asset.getQuantity().subtract(lockedCoin);
       if (availableCoin.compareTo(quantity) < 0) {
@@ -70,7 +91,11 @@ public class OrderService {
       }
     }
 
-    return orders.save(new LimitOrder(user, symbol.toUpperCase(), side.toUpperCase(), type.toUpperCase(), targetPrice, quantity));
+    return orders.save(new LimitOrder(user, normalizedSymbol, normalizedSide, normalizedType, targetPrice, quantity));
+  }
+
+  private String normalize(String value) {
+    return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
   }
 
   @Transactional

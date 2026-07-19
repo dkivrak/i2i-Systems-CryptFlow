@@ -7,7 +7,7 @@ import java.time.Instant;
 @Entity @Table(name="price_snapshots")
 public class PriceSnapshot {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
-  @Column(nullable=false, length=10) private String symbol;
+  @Column(nullable=false, length=50) private String symbol;
   @Column(name="price_usd", nullable=false, precision=28, scale=8) private BigDecimal priceUsd;
   @Column(name="recorded_at", nullable=false) private Instant recordedAt;
   protected PriceSnapshot() {}

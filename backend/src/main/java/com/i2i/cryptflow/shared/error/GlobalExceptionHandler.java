@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -31,6 +32,12 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(HttpMessageNotReadableException.class)
   ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex) {
     return ResponseEntity.badRequest().body(new ApiError("INVALID_REQUEST", "One of the submitted values is not supported.", Instant.now(), List.of()));
+  }
+
+  @ExceptionHandler(NoResourceFoundException.class)
+  ResponseEntity<ApiError> handleNotFound(NoResourceFoundException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(new ApiError("NOT_FOUND", "Resource not found.", Instant.now(), List.of()));
   }
 
   @ExceptionHandler(Exception.class)

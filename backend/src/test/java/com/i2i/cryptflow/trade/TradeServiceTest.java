@@ -31,6 +31,12 @@ class TradeServiceTest {
     assertEquals("INVALID_AMOUNT",ex.getCode());
   }
 
+  @Test void normalizesSymbolBeforeValidation(){
+    var ex=assertThrows(ApiException.class,()->service.execute(UUID.randomUUID()," btc ",TradeSide.BUY,BigDecimal.ZERO));
+    assertEquals("INVALID_AMOUNT",ex.getCode());
+    verify(supportedSymbols).isSupported("BTC");
+  }
+
   @Test void rejectsInsufficientFunds(){
     var user=new User("test@example.com","hash");var wallet=new Wallet(user,new BigDecimal("10.00"));var asset=new PortfolioAsset(wallet,"BTC");
     when(wallets.findByUserIdForUpdate(user.getId())).thenReturn(Optional.of(wallet));when(assets.findForUpdate(wallet.getId(),"BTC")).thenReturn(Optional.of(asset));when(market.price("BTC")).thenReturn(new BigDecimal("60000.00"));
