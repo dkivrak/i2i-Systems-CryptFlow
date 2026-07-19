@@ -1,6 +1,8 @@
 package com.i2i.cryptflow.websocket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -8,6 +10,7 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -17,6 +20,8 @@ import com.i2i.cryptflow.market.MarketPriceService;
 import com.i2i.cryptflow.shared.model.SupportedSymbolsService;
 import java.io.IOException;
 import java.net.http.WebSocket;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 class PriceWebSocketHandlerTest {
@@ -137,6 +143,53 @@ class PriceWebSocketHandlerTest {
         eq(RETRY_DELAY_MS),
         eq(TimeUnit.MILLISECONDS)
     );
+    handler.afterConnectionClosed(session, CloseStatus.NORMAL);
+  }
+
+  @Test
+  void broadcastsOnlyValidSupportedPricesAndContinuesDemand() throws Exception {
+    when(supportedSymbols.isSupported("BTC")).thenReturn(true);
+    var connector = new OpeningConnector();
+    var handler = handler(connector);
+    WebSocketSession session = reactSession("react-1");
+    handler.afterConnectionEstablished(session);
+    ConnectionCall connection = connector.calls("global-ticker").getFirst();
+
+    connection.listener().onText(
+        connection.webSocket(),
+        "[{\"s\":\"BTCUSDT\",\"c\":\"123.45\"},"
+            + "{\"s\":\"NOPEUSDT\",\"c\":\"1\"},"
+            + "{\"s\":\"ETHBUSD\",\"c\":\"2\"},"
+            + "{\"s\":\"ETHUSDT\",\"c\":\"0\"}]",
+        true
+    );
+
+    verify(marketPriceService).updateSinglePrice(eq("BTC"), eq(new BigDecimal("123.45")), any(Instant.class));
+    ArgumentCaptor<TextMessage> message = ArgumentCaptor.forClass(TextMessage.class);
+    verify(session).sendMessage(message.capture());
+    var payload = new ObjectMapper().readTree(message.getValue().getPayload());
+    assertTrue(payload.isArray());
+    assertEquals(1, payload.size());
+    assertEquals("BTC", payload.get(0).path("s").asText());
+    assertEquals("123.45", payload.get(0).path("p").asText());
+    verify(connection.webSocket(), times(2)).request(1);
+
+    handler.afterConnectionClosed(session, CloseStatus.NORMAL);
+  }
+
+  @Test
+  void ignoresMalformedUpstreamMessageAndContinuesDemand() throws Exception {
+    var connector = new OpeningConnector();
+    var handler = handler(connector);
+    WebSocketSession session = reactSession("react-1");
+    handler.afterConnectionEstablished(session);
+    ConnectionCall connection = connector.calls("global-ticker").getFirst();
+
+    assertDoesNotThrow(() -> connection.listener().onText(connection.webSocket(), "{not-json", true));
+
+    verifyNoInteractions(marketPriceService);
+    verify(session, never()).sendMessage(any(TextMessage.class));
+    verify(connection.webSocket(), times(2)).request(1);
     handler.afterConnectionClosed(session, CloseStatus.NORMAL);
   }
 

@@ -10,6 +10,7 @@ import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import com.i2i.cryptflow.wallet.WalletRepository;
 import java.math.*;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
@@ -46,20 +47,21 @@ public class TradeService {
 
   @Transactional
   public TradeResult execute(UUID userId, String symbol, TradeSide side, BigDecimal rawQuantity) {
-    if (!supportedSymbols.isSupported(symbol))
-      throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", "Symbol '" + symbol + "' is not supported.");
+    String normalizedSymbol = symbol == null ? "" : symbol.trim().toUpperCase(Locale.ROOT);
+    if (!supportedSymbols.isSupported(normalizedSymbol))
+      throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", "Symbol '" + normalizedSymbol + "' is not supported.");
     if (rawQuantity == null || rawQuantity.signum() <= 0 || Math.max(0, rawQuantity.stripTrailingZeros().scale()) > MAX_DECIMAL_PLACES)
       throw invalidAmount();
     var quantity = rawQuantity.setScale(MAX_DECIMAL_PLACES, RoundingMode.UNNECESSARY);
     var wallet = wallets.findByUserIdForUpdate(userId).orElseThrow();
-    var asset = assets.findForUpdate(wallet.getId(), symbol)
+    var asset = assets.findForUpdate(wallet.getId(), normalizedSymbol)
         .orElseGet(() -> {
           if (side == TradeSide.SELL) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_ASSET_BALANCE", "Insufficient asset balance for sale.");
           }
-          return assets.save(new PortfolioAsset(wallet, symbol));
+          return assets.save(new PortfolioAsset(wallet, normalizedSymbol));
         });
-    var price = market.price(symbol).setScale(MAX_DECIMAL_PLACES, RoundingMode.HALF_UP);
+    var price = market.price(normalizedSymbol).setScale(MAX_DECIMAL_PLACES, RoundingMode.HALF_UP);
     var total = quantity.multiply(price).setScale(2, RoundingMode.HALF_UP);
     if (total.signum() <= 0) {
       throw new ApiException(HttpStatus.BAD_REQUEST, "MINIMUM_ORDER_VALUE", "Total order value must be at least $0.01.");
@@ -94,7 +96,7 @@ public class TradeService {
       }
       wallet.setUsdBalance(wallet.getUsdBalance().add(total));
     }
-    var trade = trades.save(new TradeTransaction(wallet.getUser(), wallet, symbol, side, quantity, price, total));
+    var trade = trades.save(new TradeTransaction(wallet.getUser(), wallet, normalizedSymbol, side, quantity, price, total));
     
     // Log Equity Curve history
     try {

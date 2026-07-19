@@ -16,7 +16,7 @@ public class PriceAlert {
   @JoinColumn(name = "user_id")
   private User user;
 
-  @Column(nullable = false, length = 10)
+  @Column(nullable = false, length = 50)
   private String symbol;
 
   @Column(name = "target_price", nullable = false, precision = 28, scale = 8)

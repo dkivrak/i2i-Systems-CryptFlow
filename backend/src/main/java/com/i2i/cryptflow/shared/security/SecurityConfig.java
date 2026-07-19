@@ -33,7 +33,7 @@ public class SecurityConfig {
       .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(a -> a
         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/market/prices", "/api/news", "/ws/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health").permitAll()
+        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/market/prices", "/api/news", "/ws/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
         .anyRequest().authenticated())
       .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {
         res.setStatus(HttpStatus.UNAUTHORIZED.value());

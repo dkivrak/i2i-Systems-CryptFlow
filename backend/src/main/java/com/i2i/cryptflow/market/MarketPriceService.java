@@ -16,10 +16,16 @@ public class MarketPriceService {
 
   private final StringRedisTemplate redis;
   private final ExternalPriceProvider supportedSymbols;
+  private final PriceSnapshotRepository snapshots;
 
-  public MarketPriceService(StringRedisTemplate redis, ExternalPriceProvider supportedSymbols) {
+  public MarketPriceService(
+      StringRedisTemplate redis,
+      ExternalPriceProvider supportedSymbols,
+      PriceSnapshotRepository snapshots
+  ) {
     this.redis = redis;
     this.supportedSymbols = supportedSymbols;
+    this.snapshots = snapshots;
   }
 
   public MarketPrices getCurrent() {
@@ -53,6 +59,12 @@ public class MarketPriceService {
 
   public BigDecimal price(String symbol) {
     return getCurrent().prices().get(symbol);
+  }
+
+  public List<PriceSnapshot> recentHistory(String symbol) {
+    var history = new ArrayList<>(snapshots.findTop40BySymbolOrderByRecordedAtDesc(symbol.toUpperCase()));
+    Collections.reverse(history);
+    return history;
   }
 
   public void overwrite(Map<String, BigDecimal> prices, Instant time) {

@@ -1,9 +1,11 @@
 package com.i2i.cryptflow.market;
 
 import com.i2i.cryptflow.shared.error.ApiException;
+import com.i2i.cryptflow.shared.model.ExternalPriceProvider;
 import com.i2i.cryptflow.user.UserRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -14,23 +16,33 @@ import org.springframework.transaction.annotation.Transactional;
 public class AlertService {
   private final PriceAlertRepository alerts;
   private final UserRepository users;
+  private final ExternalPriceProvider supportedSymbols;
 
-  public AlertService(PriceAlertRepository alerts, UserRepository users) {
+  public AlertService(PriceAlertRepository alerts, UserRepository users, ExternalPriceProvider supportedSymbols) {
     this.alerts = alerts;
     this.users = users;
+    this.supportedSymbols = supportedSymbols;
   }
 
   @Transactional
   public PriceAlert create(UUID userId, String symbol, BigDecimal targetPrice, String condition) {
-    var user = users.findById(userId).orElseThrow();
-    if (targetPrice.signum() <= 0) {
+    String normalizedSymbol = normalize(symbol);
+    String normalizedCondition = normalize(condition);
+    if (!supportedSymbols.isSupported(normalizedSymbol)) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", "Symbol '" + normalizedSymbol + "' is not supported.");
+    }
+    if (targetPrice == null || targetPrice.signum() <= 0) {
       throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_TARGET_PRICE", "Target price must be positive.");
     }
-    String cond = condition.toUpperCase();
-    if (!cond.equals("ABOVE") && !cond.equals("BELOW")) {
+    if (!normalizedCondition.equals("ABOVE") && !normalizedCondition.equals("BELOW")) {
       throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CONDITION", "Condition must be ABOVE or BELOW.");
     }
-    return alerts.save(new PriceAlert(user, symbol.toUpperCase(), targetPrice, cond));
+    var user = users.findById(userId).orElseThrow();
+    return alerts.save(new PriceAlert(user, normalizedSymbol, targetPrice, normalizedCondition));
+  }
+
+  private String normalize(String value) {
+    return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
   }
 
   @Transactional

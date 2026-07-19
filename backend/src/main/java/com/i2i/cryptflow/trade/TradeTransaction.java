@@ -12,7 +12,7 @@ public class TradeTransaction {
   @Id private UUID id;
   @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="user_id") private User user;
   @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="wallet_id") private Wallet wallet;
-  @Column(nullable=false, length=10) private String symbol;
+  @Column(nullable=false, length=50) private String symbol;
   @Enumerated(EnumType.STRING) @Column(nullable=false) private TradeSide side;
   @Column(nullable=false, precision=28, scale=8) private BigDecimal quantity;
   @Column(name="unit_price_usd", nullable=false, precision=28, scale=8) private BigDecimal unitPriceUsd;

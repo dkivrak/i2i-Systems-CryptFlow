@@ -6,18 +6,19 @@ This document provides a detailed breakdown of the system architecture, data flo
 
 ## 1. Architectural Design Overview
 
-CryptFlow is engineered as a decoupled modular monolith on the backend with a standalone Single-Page Application (SPA) on the frontend. The system manages high-frequency price data ingestion and executes simulated trades in an ACID-compliant environment.
+CryptFlow uses a feature-oriented modular monolith on the backend with a standalone Single-Page Application (SPA) on the frontend. The system ingests live market prices and executes paper trades in an ACID-compliant environment.
 
 ```mermaid
 graph TD
     %% Sources
-    Binance[Binance WebSocket Stream] -- wss:// --> Ingestion[SupportedSymbolsService]
+    BinanceREST[Binance REST API] --> Symbols[SupportedSymbolsService]
+    BinanceWS[Binance WebSocket Stream] -- wss:// --> WSHandler[PriceWebSocketHandler]
     
     %% Backend Modules
     subgraph "CryptFlow Core Monolith"
-        Ingestion -- Implements --> Provider[ExternalPriceProvider Interface]
-        Provider -- Write Prices --> Redis[(Redis In-Memory Cache)]
-        Provider -- Broadcast Tickers --> WS[STOMP WebSocket Server]
+        Symbols -- Implements --> Provider[ExternalPriceProvider Interface]
+        WSHandler -- Write Prices --> Redis[(Redis In-Memory Cache)]
+        WSHandler -- Broadcast JSON --> WS[Native WebSocket /ws]
         
         %% Database Sync
         Engine[TickerEngine Scheduler] -- Read Redis / Save Snapshots --> PostgreSQL[(PostgreSQL Database)]
@@ -31,7 +32,7 @@ graph TD
     %% Client Layer
     subgraph "Frontend Client (React)"
         UI[React App] -- 1. REST API Requests --> Auth
-        UI -- 2. wss:// Subscriptions --> WS
+        UI -- 2. Native JSON WebSocket --> WS
         UI -- 3. Place Order --> Trade
         UI -- 4. Portfolio AI Chat --> Chat
     end
@@ -46,7 +47,7 @@ graph TD
 
 ## 2. Ingestion & Decoupling Layer (Section 5.3)
 
-To decouple price ingestion from the core trade processing engine, the system implements the `ExternalPriceProvider` interface. This allows the backend to switch between live APIs and simulated tickers without altering order routing or balance validation logic.
+The `ExternalPriceProvider` interface decouples supported-symbol discovery and initial-price lookup from consumers such as trading, orders, alerts, chat, and the ticker task. `SupportedSymbolsService` is the current live Binance-backed implementation; the repository does not contain a simulated-price implementation.
 
 ### Ingestion Interface Code Contract:
 ```java
@@ -72,12 +73,14 @@ classDiagram
         +getInitialPrice(symbol) BigDecimal
     }
     class SupportedSymbolsService {
-        +fetchLatestPrices() Map
+        +getSymbols() List
+        +isSupported(symbol) boolean
+        +getInitialPrice(symbol) BigDecimal
     }
     class TradeService {
         -ExternalPriceProvider priceProvider
     }
-    class MarketPriceService {
+    class PriceWebSocketHandler {
         -ExternalPriceProvider priceProvider
     }
     class TickerEngine {
@@ -86,7 +89,7 @@ classDiagram
 
     ExternalPriceProvider <|.. SupportedSymbolsService : implements
     TradeService --> ExternalPriceProvider : depends on
-    MarketPriceService --> ExternalPriceProvider : depends on
+    PriceWebSocketHandler --> ExternalPriceProvider : depends on
     TickerEngine --> ExternalPriceProvider : depends on
 ```
 
@@ -95,7 +98,7 @@ classDiagram
 ## 3. Core Modules & Business Logic
 
 ### 3.1. Authentication & Session Module (`com.i2i.cryptflow.auth`)
-* **State Isolation:** User credentials and hashes are stored permanently in PostgreSQL, while active session tokens are cached in Redis with a 24-hour Time-to-Live (TTL).
+* **State Isolation:** User credentials and hashes are stored in PostgreSQL, while active session tokens are cached in Redis with a configurable Time-to-Live (24 hours by default).
 * **Initial Provisioning:** Upon user registration, a randomized starting balance (between `$10,000` and `$20,000`) is credited using a cryptographically secure random generator (`SecureRandom`).
 
 ### 3.2. Order Execution Engine (`com.i2i.cryptflow.trade`)
@@ -127,10 +130,10 @@ sequenceDiagram
 ## 4. Storage Architecture & Schema Design
 
 ### 4.1. Cache Layer (Redis)
-* **`session:<token>` (String):** Stores the active user session metadata.
-* **`market:prices` (Hash):** Stores the latest ticker prices mapped to coin symbols. Key overwrites occur every 15 seconds.
+* **`session:<token>` (String):** Maps an opaque session token to a user UUID until its TTL expires.
+* **`market:prices` (Hash):** Stores the latest ticker prices mapped to coin symbols. Live WebSocket messages update entries as data arrives; the configurable ticker interval controls database snapshots and order/alert processing.
 
-### 4.2. Database Schema (PostgreSQL)
+### 4.2. Core Database Schema (PostgreSQL)
 ```mermaid
 erDiagram
     USERS {
@@ -174,6 +177,8 @@ erDiagram
     WALLETS ||--o{ TRADE_TRANSACTIONS : logs
 ```
 
+Flyway also manages `equity_history`, `limit_orders`, and `price_alerts`; see `backend/src/main/resources/db/migration` for the complete executable schema.
+
 ---
 
 ## 5. LLM Diagnostics Pipeline (`com.i2i.cryptflow.chat`)
@@ -189,10 +194,10 @@ graph LR
     
     %% Pipeline
     Prompt -- Context-Rich Payload --> Gemini[Gemini REST Client]
-    Gemini -- Try/Catch Block --> Response[Structured Markdown Response]
+    Gemini -- Try/Catch Block --> Response[Text Response]
     
     %% Error Fallback
     style Response fill:#1fc8a4,stroke:#fff,stroke-width:2px;
 ```
 
-* **Exception Fallback:** In the event of network timeouts or API limits, the client returns a structured error message (`ApiException` -> `503 Service Unavailable`) rather than blocking connection threads.
+* **Exception Fallback:** Gemini calls use a bounded synchronous wait. Missing configuration, network failures, timeouts, and invalid model responses become a structured `ApiException` with HTTP `503 Service Unavailable`.

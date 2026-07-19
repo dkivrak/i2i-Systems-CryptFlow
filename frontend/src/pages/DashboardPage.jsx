@@ -8,7 +8,7 @@ import { money, coin } from '../utils/format';
 import { changeAppLanguage } from '../utils/language';
 
 const SUPPORTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOGE', 'DOT', 'AVAX', 'LINK'];
-const DEFAULT_TRADE_PAGE_SIZE = 10000;
+const DEFAULT_TRADE_PAGE_SIZE = 100;
 
 export default function DashboardPage({ onLogout }) {
   const { t, i18n } = useTranslation();
@@ -595,9 +595,9 @@ export default function DashboardPage({ onLogout }) {
             toggleFavorite={toggleFavorite}
           />
         )}
-        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} changes={changes} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} currentLang={currentLang} />}
+        {tab === 'portfolio' && <PortfolioPanel data={portfolio} market={market} cryptoChangePercent={cryptoChangePercent} t={t} onTrade={setModal} currentLang={currentLang} />}
         {tab === 'history' && <HistoryPanel trades={trades} t={t} dateLocale={dateLocale} />}
-        {tab === 'orders' && <OrdersPanel market={market} t={t} dateLocale={dateLocale} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} />}
+        {tab === 'orders' && <OrdersPanel t={t} symbols={market?.prices ? Object.keys(market.prices) : SUPPORTED_SYMBOLS} />}
         {tab === 'news' && <NewsPanel t={t} dateLocale={dateLocale} />}
       </main>
 
@@ -781,7 +781,6 @@ function EquityChart({ history, currentTotalValue, totalCost, usdBalance }) {
 
   // Calculate overall lifetime profit stats
   const netProfit = currentTotalValue - totalCost;
-  const netProfitPercent = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
 
   // Generate timeframe data points combining database history and dynamic live data
   const chartData = useMemo(() => {
@@ -987,7 +986,7 @@ function EquityChart({ history, currentTotalValue, totalCost, usdBalance }) {
   );
 }
 
-function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade, currentLang }) {
+function PortfolioPanel({ data, market, cryptoChangePercent, t, onTrade, currentLang }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [equityHistory, setEquityHistory] = useState([]);
   const [aiAdvice, setAiAdvice] = useState('');
@@ -1021,7 +1020,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
       .catch(err => console.error("Failed to load equity history", err));
   }, [activeAssets.length]);
 
-  const loadAiAdvice = (force = false) => {
+  const loadAiAdvice = useCallback((force = false) => {
     setAiLoading(true);
     api(`/portfolio/ai-advice?lang=${currentLang}&force=${force}`)
       .then(res => {
@@ -1029,11 +1028,11 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
       })
       .catch(err => console.error("Failed to load AI advice", err))
       .finally(() => setAiLoading(false));
-  };
+  }, [currentLang]);
 
   useEffect(() => {
     loadAiAdvice(false);
-  }, [currentLang, activeAssets.length]);
+  }, [loadAiAdvice, activeAssets.length]);
 
   return (
     <div className="space-y-6">
@@ -1204,7 +1203,7 @@ function PortfolioPanel({ data, market, changes, cryptoChangePercent, t, onTrade
   );
 }
 
-function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
+function OrdersPanel({ t, symbols = SUPPORTED_SYMBOLS }) {
   const sortedSymbols = useMemo(() => {
     return [...symbols].sort((a, b) => a.localeCompare(b));
   }, [symbols]);

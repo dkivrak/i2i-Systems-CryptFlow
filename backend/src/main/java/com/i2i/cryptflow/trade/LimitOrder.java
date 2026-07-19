@@ -16,7 +16,7 @@ public class LimitOrder {
   @JoinColumn(name = "user_id")
   private User user;
 
-  @Column(nullable = false, length = 10)
+  @Column(nullable = false, length = 50)
   private String symbol;
 
   @Column(nullable = false, length = 4)
