@@ -703,9 +703,9 @@ function MarketPanel({ market, portfolio, symbols, onTrade, t, dateLocale, chang
                   <CoinLogo symbol={s} index={globalIndex} />
                 </div>
                 <p className="mt-6 label">{s} / USD</p>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <p className="text-3xl font-black">{money(market?.prices?.[s])}</p>
-                  <div className="flex items-center gap-2">
+                <div className="mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <p className="text-2xl sm:text-3xl font-black">{money(market?.prices?.[s])}</p>
+                  <div className="flex items-center gap-2 shrink-0">
                     <MiniSparkline symbol={s} currentPrice={market?.prices?.[s]} changeVal={changes?.[s]} />
                     {changes?.[s] !== undefined && (
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
