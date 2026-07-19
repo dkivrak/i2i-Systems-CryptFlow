@@ -1294,10 +1294,13 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
   };
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
       <div className="space-y-6">
         <div className="card rounded-2xl p-6 relative overflow-hidden">
-          <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">{t('orders.setPriceAlarm', { defaultValue: 'Set Price Alarm' })}</h3>
+          <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-3">
+            <span className="w-1.5 h-4 bg-[#00d8f6] rounded-full shrink-0" />
+            <h3 className="text-xs font-black text-white uppercase tracking-wider">{t('orders.setPriceAlarm', { defaultValue: 'Set Price Alarm' })}</h3>
+          </div>
           <form onSubmit={handleCreateAlert} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1340,7 +1343,7 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
             <button 
               type="submit" 
               disabled={submittingAlert}
-              className="btn btn-primary w-full py-2 text-xs"
+              className="btn btn-primary w-full py-2 text-xs font-bold uppercase tracking-wider"
             >
               {submittingAlert ? t('orders.settingAlarm', { defaultValue: 'Setting Alarm...' }) : t('orders.setPriceAlarmButton', { defaultValue: 'Set Price Alarm' })}
             </button>
@@ -1349,7 +1352,10 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
 
         <div className="card rounded-2xl overflow-hidden">
           <div className="border-b border-white/10 p-5 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.activeAlarms', { defaultValue: 'Active Alarms' })}</h3>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-amber-500 rounded-full shrink-0" />
+              <h3 className="text-xs font-black text-white uppercase tracking-wider">{t('orders.activeAlarms', { defaultValue: 'Active Alarms' })}</h3>
+            </div>
             {totalAlertsPages > 1 && (
               <div className="flex items-center gap-1.5">
                 <button
@@ -1377,7 +1383,7 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
           <div className="divide-y divide-white/5">
             {displayedAlerts.length > 0 ? (
               displayedAlerts.map(a => (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
+                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 text-xs hover:bg-white/[0.01] transition">
                   <div>
                     <span className="font-bold text-white">{a.symbol}</span>
                     <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.goesAbove', { defaultValue: 'Goes Above' }) : t('orders.goesBelow', { defaultValue: 'Goes Below' })}</span>
@@ -1386,16 +1392,18 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
                     <span className="font-bold text-[#00d8f6]">{money(a.targetPrice)}</span>
                     <button 
                       onClick={() => handleDeleteAlert(a.id)}
-                      className="text-slate-500 hover:text-rose-400 transition"
+                      className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 transition flex items-center justify-center"
                       title="Delete Alert"
                     >
-                      🗑
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                      </svg>
                     </button>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="p-5 text-center text-slate-500">{t('orders.noActiveAlarms', { defaultValue: 'No active alarms set.' })}</p>
+              <p className="p-5 text-center text-slate-500 text-xs">{t('orders.noActiveAlarms', { defaultValue: 'No active alarms set.' })}</p>
             )}
           </div>
         </div>
@@ -1404,7 +1412,10 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
       <div className="space-y-6">
         <div className="card rounded-2xl overflow-hidden">
           <div className="border-b border-white/10 p-5 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.pendingOrders', { defaultValue: 'Pending Orders' })}</h3>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-[#1fc8a4] rounded-full shrink-0" />
+              <h3 className="text-xs font-black text-white uppercase tracking-wider">{t('orders.pendingOrders', { defaultValue: 'Pending Orders' })}</h3>
+            </div>
             {totalOrdersPages > 1 && (
               <div className="flex items-center gap-1.5">
                 <button
@@ -1435,7 +1446,7 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
                 const orderTypeTranslated = t(`trade.orderType.${o.type}`, { defaultValue: o.type.replace('_', ' ') }).toUpperCase();
                 const orderSideTranslated = (o.side === 'BUY' ? t('trade.buy') : t('trade.sell')).toUpperCase();
                 return (
-                  <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-xs">
+                  <div key={o.id} className="flex items-center justify-between px-5 py-3.5 text-xs hover:bg-white/[0.01] transition">
                     <div>
                       <span className={`font-bold px-1.5 py-0.5 rounded text-[9px] mr-2 ${
                         o.side === 'BUY' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
@@ -1446,7 +1457,7 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
                       <span className="font-bold text-[#00d8f6]">{money(o.targetPrice)}</span>
                       <button 
                         onClick={() => handleCancelOrder(o.id)}
-                        className="rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] text-slate-400 hover:text-white transition font-bold"
+                        className="rounded-lg bg-rose-500/5 border border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/20 px-2.5 py-1 text-[10px] text-rose-400 hover:text-rose-300 transition font-bold"
                       >
                         {t('orders.cancelOrder', { defaultValue: 'Cancel' })}
                       </button>
@@ -1455,14 +1466,17 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
                 );
               })
             ) : (
-              <p className="p-5 text-center text-slate-500">{t('orders.noPendingOrders', { defaultValue: 'No pending limit orders.' })}</p>
+              <p className="p-5 text-center text-slate-500 text-xs">{t('orders.noPendingOrders', { defaultValue: 'No pending limit orders.' })}</p>
             )}
           </div>
         </div>
 
         <div className="card rounded-2xl overflow-hidden">
           <div className="border-b border-white/10 p-5 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('orders.triggeredAlarmsHistory', { defaultValue: 'Triggered Alarms History' })}</h3>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-slate-500 rounded-full shrink-0" />
+              <h3 className="text-xs font-black text-white uppercase tracking-wider">{t('orders.triggeredAlarmsHistory', { defaultValue: 'Triggered Alarms History' })}</h3>
+            </div>
             {totalTriggeredPages > 1 && (
               <div className="flex items-center gap-1.5">
                 <button
@@ -1490,16 +1504,17 @@ function OrdersPanel({ market, t, dateLocale, symbols = SUPPORTED_SYMBOLS }) {
           <div className="divide-y divide-white/5">
             {displayedTriggered.length > 0 ? (
               displayedTriggered.map(a => (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 text-xs bg-emerald-500/[0.02]">
-                  <div>
-                    <span className="font-bold text-emerald-400">✓ {a.symbol}</span>
-                    <span className="ml-2 text-slate-500">{a.condition === 'ABOVE' ? t('orders.wentAbove', { defaultValue: 'went above' }) : t('orders.wentBelow', { defaultValue: 'went below' })}</span>
+                <div key={a.id} className="flex items-center justify-between px-5 py-3.5 text-xs bg-emerald-500/[0.01] hover:bg-emerald-500/[0.03] transition">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black">✓</span>
+                    <span className="font-bold text-white">{a.symbol}</span>
+                    <span className="text-slate-500">{a.condition === 'ABOVE' ? t('orders.wentAbove', { defaultValue: 'went above' }) : t('orders.wentBelow', { defaultValue: 'went below' })}</span>
                   </div>
                   <span className="font-bold text-slate-400">{money(a.targetPrice)}</span>
                 </div>
               ))
             ) : (
-              <p className="p-5 text-center text-slate-500">{t('orders.noTriggeredAlarms', { defaultValue: 'No triggered alarms.' })}</p>
+              <p className="p-5 text-center text-slate-500 text-xs">{t('orders.noTriggeredAlarms', { defaultValue: 'No triggered alarms.' })}</p>
             )}
           </div>
         </div>
