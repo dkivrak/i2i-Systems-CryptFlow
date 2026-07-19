@@ -30,5 +30,17 @@ export async function api(path, options = {}) {
   return data
 }
 
-const backendOrigin = API_BASE_URL.replace(/\/api$/, '')
-export const WS_URL = import.meta.env.VITE_WS_URL || (backendOrigin.replace(/^http/, 'ws') + '/ws')
+const getWsUrl = () => {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
+  if (API_BASE_URL.startsWith('/')) {
+    const loc = window.location;
+    const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${loc.host}${API_BASE_URL.replace(/\/api$/, '')}/ws`;
+  }
+  const backendOrigin = API_BASE_URL.replace(/\/api$/, '');
+  return backendOrigin.replace(/^http/, 'ws') + '/ws';
+};
+
+export const WS_URL = getWsUrl();
