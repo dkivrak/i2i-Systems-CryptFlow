@@ -2,6 +2,7 @@ package com.i2i.cryptflow.market;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class NewsController {
     }
 
     @GetMapping
-    public List<NewsItem> getNews() {
-        return newsService.getNews();
+    public List<NewsItem> getNews(@RequestParam(value = "lang", defaultValue = "en") String lang) {
+        return newsService.getNews(lang);
     }
 }

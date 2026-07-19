@@ -26,37 +26,57 @@ public class NewsService {
 
     private final WebClient webClient;
     
-    private List<NewsItem> cachedNews = null;
-    private Instant cacheExpiry = Instant.MIN;
+    private List<NewsItem> cachedEnNews = null;
+    private Instant cacheExpiryEn = Instant.MIN;
+    
+    private List<NewsItem> cachedTrNews = null;
+    private Instant cacheExpiryTr = Instant.MIN;
+
     private final Object cacheLock = new Object();
 
     public NewsService(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
     }
 
-    public List<NewsItem> getNews() {
+    public List<NewsItem> getNews(String lang) {
         synchronized (cacheLock) {
-            if (cachedNews != null && Instant.now().isBefore(cacheExpiry)) {
-                return cachedNews;
+            boolean isTr = "tr".equalsIgnoreCase(lang);
+            List<NewsItem> cached = isTr ? cachedTrNews : cachedEnNews;
+            Instant expiry = isTr ? cacheExpiryTr : cacheExpiryEn;
+
+            if (cached != null && Instant.now().isBefore(expiry)) {
+                return cached;
             }
 
-            List<NewsItem> freshNews = fetchAndParseAllFeeds();
-            if (!freshNews.isEmpty() || cachedNews == null) {
-                cachedNews = freshNews;
-                cacheExpiry = Instant.now().plus(Duration.ofMinutes(5));
+            List<NewsItem> freshNews = fetchAndParseAllFeeds(isTr);
+            if (!freshNews.isEmpty() || cached == null) {
+                if (isTr) {
+                    cachedTrNews = freshNews;
+                    cacheExpiryTr = Instant.now().plus(Duration.ofMinutes(5));
+                } else {
+                    cachedEnNews = freshNews;
+                    cacheExpiryEn = Instant.now().plus(Duration.ofMinutes(5));
+                }
+                return freshNews;
             }
-            return cachedNews;
+            return cached;
         }
     }
 
-    private List<NewsItem> fetchAndParseAllFeeds() {
+    private List<NewsItem> fetchAndParseAllFeeds(boolean isTr) {
         List<NewsItem> aggregatedNews = new ArrayList<>();
 
-        // Cointelegraph
-        aggregatedNews.addAll(fetchAndParseFeed("https://cointelegraph.com/rss", "Cointelegraph"));
-
-        // CoinDesk
-        aggregatedNews.addAll(fetchAndParseFeed("https://www.coindesk.com/arc/outboundfeeds/rss/", "CoinDesk"));
+        if (isTr) {
+            // KoinFinans
+            aggregatedNews.addAll(fetchAndParseFeed("https://www.koinfinans.com/feed/", "KoinFinans"));
+            // Investing.com TR
+            aggregatedNews.addAll(fetchAndParseFeed("https://tr.investing.com/rss/302.rss", "Investing.com"));
+        } else {
+            // Cointelegraph
+            aggregatedNews.addAll(fetchAndParseFeed("https://cointelegraph.com/rss", "Cointelegraph"));
+            // CoinDesk
+            aggregatedNews.addAll(fetchAndParseFeed("https://www.coindesk.com/arc/outboundfeeds/rss/", "CoinDesk"));
+        }
 
         // Sort descending by publication date
         aggregatedNews.sort(Comparator.comparingLong(NewsItem::publishedOn).reversed());
@@ -74,7 +94,6 @@ public class NewsService {
 
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            // Prevent XXE attacks by disabling external DTDs
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             DocumentBuilder builder = factory.newDocumentBuilder();
             
@@ -96,7 +115,7 @@ public class NewsService {
                         continue;
                     }
 
-                    // Extract image URL from different possible tags/attributes
+                    // Extract image URL
                     String imageUrl = getElementAttribute(element, "media:content", "url");
                     if (imageUrl == null || imageUrl.isBlank()) {
                         imageUrl = getElementAttribute(element, "enclosure", "url");
@@ -105,7 +124,7 @@ public class NewsService {
                         imageUrl = extractImageFromHtml(description);
                     }
 
-                    // Fallback images based on tags / topic if missing
+                    // Fallback images
                     if (imageUrl == null || imageUrl.isBlank()) {
                         imageUrl = getDefaultImageForTopic(title);
                     }
@@ -208,9 +227,15 @@ public class NewsService {
                 return ZonedDateTime.parse(pubDateStr, formatter).toEpochSecond();
             } catch (Exception ex) {
                 try {
-                    return Instant.parse(pubDateStr).getEpochSecond();
+                    // Handle Investing.com "Jul 13, 2026 13:09 GMT"
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm z", Locale.ENGLISH);
+                    return ZonedDateTime.parse(pubDateStr, formatter).toEpochSecond();
                 } catch (Exception ex2) {
-                    return Instant.now().getEpochSecond();
+                    try {
+                        return Instant.parse(pubDateStr).getEpochSecond();
+                    } catch (Exception ex3) {
+                        return Instant.now().getEpochSecond();
+                    }
                 }
             }
         }

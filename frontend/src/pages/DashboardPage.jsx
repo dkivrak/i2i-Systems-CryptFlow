@@ -1537,7 +1537,8 @@ function NewsPanel({ t, dateLocale }) {
       try {
         setLoading(true);
         setError('');
-        const data = await api('/news');
+        const currentLang = i18n.language || 'en';
+        const data = await api(`/news?lang=${currentLang}`);
         if (active) {
           setNews(data || []);
         }
@@ -1557,7 +1558,7 @@ function NewsPanel({ t, dateLocale }) {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [t, i18n.language]);
 
   const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 6;

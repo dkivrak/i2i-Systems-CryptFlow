@@ -16,9 +16,9 @@ class NewsControllerTest {
         List<NewsItem> expected = List.of(
             new NewsItem("n1", "Title 1", "Body 1", "Source 1", "https://url1", "https://image1", 123456789L)
         );
-        when(newsService.getNews()).thenReturn(expected);
+        when(newsService.getNews("en")).thenReturn(expected);
 
-        List<NewsItem> result = controller.getNews();
+        List<NewsItem> result = controller.getNews("en");
 
         assertEquals(expected, result);
         assertEquals(1, result.size());
